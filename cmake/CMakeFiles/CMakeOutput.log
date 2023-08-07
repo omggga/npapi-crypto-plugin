@@ -1,0 +1,243 @@
+The system is: Windows - 6.1 - AMD64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler:  
+Build flags: 
+Id flags: 
+
+The output was:
+0
+Microsoft (R) Build Engine версии 14.0.23107.0
+(C) Корпорация Майкрософт (Microsoft Corporation). Все права защищены.
+
+Сборка начата 12.01.2016 18:09:42.
+Проект "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\3.1.0\CompilerIdC\CompilerIdC.vcxproj" в узле 1 (целевые объекты по умолчанию).
+PrepareForBuild:
+  Создание каталога "Debug\".
+  Создание каталога "Debug\CompilerIdC.tlog\".
+InitializeBuildStatus:
+  Создание "Debug\CompilerIdC.tlog\unsuccessfulbuild", так как было задано "AlwaysCreate".
+ClCompile:
+  F:\VS14\VC\bin\CL.exe /c /nologo /W0 /WX- /Od /Oy- /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TC /analyze- /errorReport:queue CMakeCCompilerId.c
+  CMakeCCompilerId.c
+Link:
+  F:\VS14\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:".\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\CompilerIdC.lib" /MACHINE:X86 /SAFESEH Debug\CMakeCCompilerId.obj
+  CompilerIdC.vcxproj -> D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\3.1.0\CompilerIdC\.\CompilerIdC.exe
+PostBuildEvent:
+  for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
+  :VCEnd
+  CMAKE_C_COMPILER=F:\VS14\VC\bin\cl.exe
+FinalizeBuildStatus:
+  Файл "Debug\CompilerIdC.tlog\unsuccessfulbuild" удаляется.
+  Обращение к "Debug\CompilerIdC.tlog\CompilerIdC.lastbuildstate".
+Сборка проекта "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\3.1.0\CompilerIdC\CompilerIdC.vcxproj" завершена (целевые объекты по умолчанию).
+
+Сборка успешно завершена.
+    Предупреждений: 0
+    Ошибок: 0
+
+Затраченное время: 00:00:00.75
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+
+The C compiler identification is MSVC, found in "D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/3.1.0/CompilerIdC/CompilerIdC.exe"
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler:  
+Build flags: 
+Id flags: 
+
+The output was:
+0
+Microsoft (R) Build Engine версии 14.0.23107.0
+(C) Корпорация Майкрософт (Microsoft Corporation). Все права защищены.
+
+Сборка начата 12.01.2016 18:09:43.
+Проект "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\3.1.0\CompilerIdCXX\CompilerIdCXX.vcxproj" в узле 1 (целевые объекты по умолчанию).
+PrepareForBuild:
+  Создание каталога "Debug\".
+  Создание каталога "Debug\CompilerIdCXX.tlog\".
+InitializeBuildStatus:
+  Создание "Debug\CompilerIdCXX.tlog\unsuccessfulbuild", так как было задано "AlwaysCreate".
+ClCompile:
+  F:\VS14\VC\bin\CL.exe /c /nologo /W0 /WX- /Od /Oy- /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:queue CMakeCXXCompilerId.cpp
+  CMakeCXXCompilerId.cpp
+Link:
+  F:\VS14\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:".\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\CompilerIdCXX.lib" /MACHINE:X86 /SAFESEH Debug\CMakeCXXCompilerId.obj
+  CompilerIdCXX.vcxproj -> D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\3.1.0\CompilerIdCXX\.\CompilerIdCXX.exe
+PostBuildEvent:
+  for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+  :VCEnd
+  CMAKE_CXX_COMPILER=F:\VS14\VC\bin\cl.exe
+FinalizeBuildStatus:
+  Файл "Debug\CompilerIdCXX.tlog\unsuccessfulbuild" удаляется.
+  Обращение к "Debug\CompilerIdCXX.tlog\CompilerIdCXX.lastbuildstate".
+Сборка проекта "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\3.1.0\CompilerIdCXX\CompilerIdCXX.vcxproj" завершена (целевые объекты по умолчанию).
+
+Сборка успешно завершена.
+    Предупреждений: 0
+    Ошибок: 0
+
+Затраченное время: 00:00:00.43
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+
+The CXX compiler identification is MSVC, found in "D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/3.1.0/CompilerIdCXX/CompilerIdCXX.exe"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp
+
+Run Build Command:"C:/Program Files (x86)/MSBuild/14.0/bin/MSBuild.exe" "cmTryCompileExec1382524454.vcxproj" "/p:Configuration=Debug" "/p:VisualStudioVersion=14.0"
+Microsoft (R) Build Engine версии 14.0.23107.0
+(C) Корпорация Майкрософт (Microsoft Corporation). Все права защищены.
+
+Сборка начата 12.01.2016 18:09:44.
+Проект "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\cmTryCompileExec1382524454.vcxproj" в узле 1 (целевые объекты по умолчанию).
+PrepareForBuild:
+  Создание каталога "cmTryCompileExec1382524454.dir\Debug\".
+  Создание каталога "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\".
+  Создание каталога "cmTryCompileExec1382524454.dir\Debug\cmTryCom.89BD3684.tlog\".
+InitializeBuildStatus:
+  Создание "cmTryCompileExec1382524454.dir\Debug\cmTryCom.89BD3684.tlog\unsuccessfulbuild", так как было задано "AlwaysCreate".
+ClCompile:
+  F:\VS14\VC\bin\CL.exe /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTryCompileExec1382524454.dir\Debug\\" /Fd"cmTryCompileExec1382524454.dir\Debug\vc140.pdb" /Gd /TC /analyze- /errorReport:queue "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\testCCompiler.c"
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.00.23026 for x86
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  cl /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTryCompileExec1382524454.dir\Debug\\" /Fd"cmTryCompileExec1382524454.dir\Debug\vc140.pdb" /Gd /TC /analyze- /errorReport:queue "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\testCCompiler.c"
+  
+  testCCompiler.c
+Link:
+  F:\VS14\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:"D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec1382524454.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1382524454.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1382524454.lib" /MACHINE:X86 /SAFESEH  /machine:X86 /debug cmTryCompileExec1382524454.dir\Debug\testCCompiler.obj
+  cmTryCompileExec1382524454.vcxproj -> D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec1382524454.exe
+FinalizeBuildStatus:
+  Файл "cmTryCompileExec1382524454.dir\Debug\cmTryCom.89BD3684.tlog\unsuccessfulbuild" удаляется.
+  Обращение к "cmTryCompileExec1382524454.dir\Debug\cmTryCom.89BD3684.tlog\cmTryCompileExec1382524454.lastbuildstate".
+Сборка проекта "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\cmTryCompileExec1382524454.vcxproj" завершена (целевые объекты по умолчанию).
+
+Сборка успешно завершена.
+    Предупреждений: 0
+    Ошибок: 0
+
+Затраченное время: 00:00:00.46
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp
+
+Run Build Command:"C:/Program Files (x86)/MSBuild/14.0/bin/MSBuild.exe" "cmTryCompileExec1806539674.vcxproj" "/p:Configuration=Debug" "/p:VisualStudioVersion=14.0"
+Microsoft (R) Build Engine версии 14.0.23107.0
+(C) Корпорация Майкрософт (Microsoft Corporation). Все права защищены.
+
+Сборка начата 12.01.2016 18:09:45.
+Проект "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\cmTryCompileExec1806539674.vcxproj" в узле 1 (целевые объекты по умолчанию).
+PrepareForBuild:
+  Создание каталога "cmTryCompileExec1806539674.dir\Debug\".
+  Создание каталога "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\".
+  Создание каталога "cmTryCompileExec1806539674.dir\Debug\cmTryCom.E043057C.tlog\".
+InitializeBuildStatus:
+  Создание "cmTryCompileExec1806539674.dir\Debug\cmTryCom.E043057C.tlog\unsuccessfulbuild", так как было задано "AlwaysCreate".
+ClCompile:
+  F:\VS14\VC\bin\CL.exe /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTryCompileExec1806539674.dir\Debug\\" /Fd"cmTryCompileExec1806539674.dir\Debug\vc140.pdb" /Gd /TC /analyze- /errorReport:queue "C:\Program Files (x86)\CMake\share\cmake-3.1\Modules\CMakeCCompilerABI.c"
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.00.23026 for x86
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  cl /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTryCompileExec1806539674.dir\Debug\\" /Fd"cmTryCompileExec1806539674.dir\Debug\vc140.pdb" /Gd /TC /analyze- /errorReport:queue "C:\Program Files (x86)\CMake\share\cmake-3.1\Modules\CMakeCCompilerABI.c"
+  
+  CMakeCCompilerABI.c
+Link:
+  F:\VS14\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:"D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec1806539674.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1806539674.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1806539674.lib" /MACHINE:X86 /SAFESEH  /machine:X86 /debug cmTryCompileExec1806539674.dir\Debug\CMakeCCompilerABI.obj
+  cmTryCompileExec1806539674.vcxproj -> D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec1806539674.exe
+FinalizeBuildStatus:
+  Файл "cmTryCompileExec1806539674.dir\Debug\cmTryCom.E043057C.tlog\unsuccessfulbuild" удаляется.
+  Обращение к "cmTryCompileExec1806539674.dir\Debug\cmTryCom.E043057C.tlog\cmTryCompileExec1806539674.lastbuildstate".
+Сборка проекта "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\cmTryCompileExec1806539674.vcxproj" завершена (целевые объекты по умолчанию).
+
+Сборка успешно завершена.
+    Предупреждений: 0
+    Ошибок: 0
+
+Затраченное время: 00:00:00.46
+
+
+Determining if the CXX compiler works passed with the following output:
+Change Dir: D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp
+
+Run Build Command:"C:/Program Files (x86)/MSBuild/14.0/bin/MSBuild.exe" "cmTryCompileExec1793274514.vcxproj" "/p:Configuration=Debug" "/p:VisualStudioVersion=14.0"
+Microsoft (R) Build Engine версии 14.0.23107.0
+(C) Корпорация Майкрософт (Microsoft Corporation). Все права защищены.
+
+Сборка начата 12.01.2016 18:09:45.
+Проект "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\cmTryCompileExec1793274514.vcxproj" в узле 1 (целевые объекты по умолчанию).
+PrepareForBuild:
+  Создание каталога "cmTryCompileExec1793274514.dir\Debug\".
+  Создание каталога "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\".
+  Создание каталога "cmTryCompileExec1793274514.dir\Debug\cmTryCom.DC7B2867.tlog\".
+InitializeBuildStatus:
+  Создание "cmTryCompileExec1793274514.dir\Debug\cmTryCom.DC7B2867.tlog\unsuccessfulbuild", так как было задано "AlwaysCreate".
+ClCompile:
+  F:\VS14\VC\bin\CL.exe /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTryCompileExec1793274514.dir\Debug\\" /Fd"cmTryCompileExec1793274514.dir\Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:queue "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\testCXXCompiler.cxx"
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.00.23026 for x86
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  cl /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTryCompileExec1793274514.dir\Debug\\" /Fd"cmTryCompileExec1793274514.dir\Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:queue "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\testCXXCompiler.cxx"
+  
+  testCXXCompiler.cxx
+Link:
+  F:\VS14\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:"D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec1793274514.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1793274514.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec1793274514.lib" /MACHINE:X86 /SAFESEH  /machine:X86 /debug cmTryCompileExec1793274514.dir\Debug\testCXXCompiler.obj
+  cmTryCompileExec1793274514.vcxproj -> D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec1793274514.exe
+FinalizeBuildStatus:
+  Файл "cmTryCompileExec1793274514.dir\Debug\cmTryCom.DC7B2867.tlog\unsuccessfulbuild" удаляется.
+  Обращение к "cmTryCompileExec1793274514.dir\Debug\cmTryCom.DC7B2867.tlog\cmTryCompileExec1793274514.lastbuildstate".
+Сборка проекта "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\cmTryCompileExec1793274514.vcxproj" завершена (целевые объекты по умолчанию).
+
+Сборка успешно завершена.
+    Предупреждений: 0
+    Ошибок: 0
+
+Затраченное время: 00:00:00.48
+
+
+Detecting CXX compiler ABI info compiled with the following output:
+Change Dir: D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp
+
+Run Build Command:"C:/Program Files (x86)/MSBuild/14.0/bin/MSBuild.exe" "cmTryCompileExec2100198585.vcxproj" "/p:Configuration=Debug" "/p:VisualStudioVersion=14.0"
+Microsoft (R) Build Engine версии 14.0.23107.0
+(C) Корпорация Майкрософт (Microsoft Corporation). Все права защищены.
+
+Сборка начата 12.01.2016 18:09:46.
+Проект "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\cmTryCompileExec2100198585.vcxproj" в узле 1 (целевые объекты по умолчанию).
+PrepareForBuild:
+  Создание каталога "cmTryCompileExec2100198585.dir\Debug\".
+  Создание каталога "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\".
+  Создание каталога "cmTryCompileExec2100198585.dir\Debug\cmTryCom.79771F5E.tlog\".
+InitializeBuildStatus:
+  Создание "cmTryCompileExec2100198585.dir\Debug\cmTryCom.79771F5E.tlog\unsuccessfulbuild", так как было задано "AlwaysCreate".
+ClCompile:
+  F:\VS14\VC\bin\CL.exe /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTryCompileExec2100198585.dir\Debug\\" /Fd"cmTryCompileExec2100198585.dir\Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:queue "C:\Program Files (x86)\CMake\share\cmake-3.1\Modules\CMakeCXXCompilerABI.cpp"
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.00.23026 for x86
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  cl /c /Zi /W3 /WX- /Od /Ob0 /Oy- /D WIN32 /D _WINDOWS /D _DEBUG /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTryCompileExec2100198585.dir\Debug\\" /Fd"cmTryCompileExec2100198585.dir\Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:queue "C:\Program Files (x86)\CMake\share\cmake-3.1\Modules\CMakeCXXCompilerABI.cpp"
+  
+  CMakeCXXCompilerABI.cpp
+Link:
+  F:\VS14\VC\bin\link.exe /ERRORREPORT:QUEUE /OUT:"D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec2100198585.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec2100198585.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/dev/GitLab/FireBreath-20a/cmake/CMakeFiles/CMakeTmp/Debug/cmTryCompileExec2100198585.lib" /MACHINE:X86 /SAFESEH  /machine:X86 /debug cmTryCompileExec2100198585.dir\Debug\CMakeCXXCompilerABI.obj
+  cmTryCompileExec2100198585.vcxproj -> D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\Debug\cmTryCompileExec2100198585.exe
+FinalizeBuildStatus:
+  Файл "cmTryCompileExec2100198585.dir\Debug\cmTryCom.79771F5E.tlog\unsuccessfulbuild" удаляется.
+  Обращение к "cmTryCompileExec2100198585.dir\Debug\cmTryCom.79771F5E.tlog\cmTryCompileExec2100198585.lastbuildstate".
+Сборка проекта "D:\dev\GitLab\FireBreath-20a\cmake\CMakeFiles\CMakeTmp\cmTryCompileExec2100198585.vcxproj" завершена (целевые объекты по умолчанию).
+
+Сборка успешно завершена.
+    Предупреждений: 0
+    Ошибок: 0
+
+Затраченное время: 00:00:00.47
+
+
