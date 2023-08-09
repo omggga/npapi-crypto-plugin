@@ -1,0 +1,7 @@
+{
+   "name": "com.example.firewyrmhost",
+   "description": "DocFlow Plugin2",
+   "path": "[Filepath]",
+   "type": "stdio",
+   "allowed_origins": ["chrome-extension://nglabmejemaebakhalkjgfeegplfboip/"]
+}
