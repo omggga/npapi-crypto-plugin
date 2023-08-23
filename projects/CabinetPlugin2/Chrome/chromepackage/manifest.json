@@ -1,0 +1,9 @@
+{
+  "name": "CabinetPlugin2",
+  "version": "${FBSTRING_PLUGIN_VERSION}",
+  "description": " Docflow Plugin2",
+
+	"plugins": [
+    { "path": "npCabinetPlugin2.dll", "public": true }
+  ]
+}
