@@ -1,0 +1,7 @@
+{
+   "name": "com.example.firewyrmhost",
+   "description": "",
+   "path": "[Filepath]",
+   "type": "stdio",
+   "allowed_origins": ["chrome-extension://nglabmejemaebakhalkjgfeegplfboip/"]
+}
