@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<w:Wix xmlns:w="http://schemas.microsoft.com/wix/2006/wi" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:fn="http://www.w3.org/2005/xpath-functions">
+    <w:Fragment>
+        <w:DirectoryRef Id="INSTALLDIR" />
+    </w:Fragment>
+    <w:Fragment>
+        <w:ComponentGroup Id="PluginDLLGroup">
+            <w:Component Id="cmp428B5E2326539059E3CAC1D3E167A626" Guid="{2241A114-9489-4358-B2F2-88BBBE576533}" Directory="INSTALLDIR">
+                <w:File Id="fil7B8EBC925FE59E9F1053AA471AA5839E" Source="$(var.BINSRC)\npCabinetPlugin2.dll">
+                    <w:TypeLib Id="{2041E46B-51B6-51E8-92F1-756594496F88}" Description="CabinetPlugin2 1.0 Type Library" HelpDirectory="INSTALLDIR" Language="0" MajorVersion="1" MinorVersion="0">
+                        <AppId Description="FireBreathWin" Id="{B415CD14-B45D-4BCA-B552-B06175C38606}" xmlns="http://schemas.microsoft.com/wix/2006/wi">
+                            <Class Id="{21F111BC-FF24-5151-83B5-333E514CBA9F}" Context="InprocServer32" Description="Docflow Plugin2" ThreadingModel="apartment" Version="1" Programmable="yes" Control="yes">
+                                <ProgId Id="CabinetPlugin2.1" Description="Docflow Plugin2">
+                                    <ProgId Id="CabinetPlugin2" Description="Docflow Plugin2" />
+                                </ProgId>
+                            </Class>
+                        </AppId>
+                        <Interface Id="{7F3E2D99-F26D-52E1-A975-7FC58091B958}" Name="IFBComJavascriptObject" ProxyStubClassId32="{00020424-0000-0000-C000-000000000046}" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+                        <Interface Id="{831CA09D-522F-5CF2-9C01-3A2C4CC69C04}" Name="IFBComEventSource" ProxyStubClassId32="{00020420-0000-0000-C000-000000000046}" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+                        <Interface Id="{BA29B850-C52A-5DF6-BB27-78220EE39998}" Name="IFBControl" ProxyStubClassId32="{00020424-0000-0000-C000-000000000046}" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+                    </w:TypeLib>
+                </w:File>
+                <ProgId Id="MIME" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+                <w:RegistryValue Key="AppID\npCabinetPlugin2.dll" Value="{B415CD14-B45D-4BCA-B552-B06175C38606}" Type="string" Action="write" Name="AppID" Root="HKCR" />
+                <w:RegistryValue Key="CLSID\{21f111bc-ff24-5151-83b5-333e514cba9f}\MiscStatus\1" Value="131473" Type="string" Action="write" Root="HKCR" />
+                <w:RegistryValue Key="CLSID\{21f111bc-ff24-5151-83b5-333e514cba9f}\MiscStatus" Value="0" Type="string" Action="write" Root="HKCR" />
+                <w:RegistryValue Key="MIME\Database\Content Type\application/x-cabinetplugin2" Value="Docflow Plugin2" Type="string" Action="write" Root="HKCR" />
+                <w:RegistryValue Key="MIME\Database\Content Type\application/x-cabinetplugin2" Value="" Type="string" Action="write" Name="Extension" Root="HKCR" />
+                <w:RegistryValue Key="MIME\Database\Content Type\application/x-cabinetplugin2" Value="{21f111bc-ff24-5151-83b5-333e514cba9f}" Type="string" Action="write" Name="CLSID" Root="HKCR" />
+                <w:RegistryValue Key="Software\Microsoft\Windows\CurrentVersion\Ext\PreApproved\{21f111bc-ff24-5151-83b5-333e514cba9f}" Value="" Type="string" Action="write" Root="HKCU" />
+                <w:RegistryValue Key="Software\Microsoft\Windows\CurrentVersion\Ext\Stats\{21f111bc-ff24-5151-83b5-333e514cba9f}\iexplore\AllowedDomains\*" Value="" Type="string" Action="write" Root="HKCU" />
+                <w:RegistryValue Key="Software\Microsoft\Windows\CurrentVersion\Ext\Stats\{21f111bc-ff24-5151-83b5-333e514cba9f}\iexplore" Value="0" Type="integer" Action="write" Name="Count" Root="HKCU" />
+                <w:RegistryValue Key="Software\MozillaPlugins\example.com/CabinetPlugin2\MimeTypes\application/x-cabinetplugin2" Value="" Type="string" Action="write" Root="HKCU" />
+                <w:RegistryValue Key="Software\MozillaPlugins\example.com/CabinetPlugin2" Value="[#fil7B8EBC925FE59E9F1053AA471AA5839E]" Type="string" Action="write" Name="Path" Root="HKCU" KeyPath="yes" />
+                <w:RegistryValue Key="Software\MozillaPlugins\example.com/CabinetPlugin2" Value="true" Type="string" Action="write" Name="FireWyrm" Root="HKCU" />
+                <w:RegistryValue Key="Software\MozillaPlugins\example.com/CabinetPlugin2" Value="Docflow Plugin2" Type="string" Action="write" Name="Description" Root="HKCU" />
+                <w:RegistryValue Key="Software\MozillaPlugins\example.com/CabinetPlugin2" Value="CabinetPlugin2" Type="string" Action="write" Name="ProductName" Root="HKCU" />
+                <w:RegistryValue Key="Software\MozillaPlugins\example.com/CabinetPlugin2" Value="" Type="string" Action="write" Name="Vendor" Root="HKCU" />
+                <w:RegistryValue Key="Software\MozillaPlugins\example.com/CabinetPlugin2" Value="1.0.6.0" Type="string" Action="write" Name="Version" Root="HKCU" />
+            </w:Component>
+        </w:ComponentGroup>
+    </w:Fragment>
+</w:Wix>
