@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:SystemTools="http://schemas.appsecinc.com/wix/SystemToolsExtension">
+    <Product Id="*" Name="${FBSTRING_PluginName}" Language="1033" Version="${FBSTRING_PLUGIN_VERSION}" Manufacturer="${FBSTRING_CompanyName}" UpgradeCode="{${FBControl_WixUpgradeCode_GUID}}">
+        <Package InstallerVersion="200" Compressed="yes" Description="Installer for the ${FBSTRING_PluginName} plugin" InstallScope="perUser" />
+        <Upgrade Id="{${FBControl_WixUpgradeCode_GUID}}">
+            <UpgradeVersion
+                Property="OLD_VERSION_FOUND"
+                Minimum="0.0.1" IncludeMinimum="yes"
+                Maximum="${FBSTRING_PLUGIN_VERSION}" IncludeMaximum="yes"
+                OnlyDetect="no" IgnoreRemoveFailure="yes"
+                MigrateFeatures="yes" />
+        </Upgrade>
+		<Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+        <InstallExecuteSequence>
+            <RemoveExistingProducts After="InstallInitialize" />
+            <InstallExecute After="RemoveExistingProducts" />
+        </InstallExecuteSequence>
+        <Media Id="1" Cabinet="${PLUGIN_NAME}.cab" EmbedCab="yes" />
+
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="${FB_WIX_INSTALL_LOCATION}">
+                <Directory Id="CompanyDir" Name="${COMPANY_NAME}">
+                    <Component Id="CompanyDirComp" Guid="*">
+                        <RemoveFolder Id="RemoveCompanyDir" On="uninstall" />
+                        <RegistryValue
+                            Root="HKCU"
+                            Key="SOFTWARE\${COMPANY_NAME}"
+                            Name="Uninstall"
+                            Type="string"
+                            Value="${FBSTRING_PLUGIN_VERSION}"
+                            KeyPath="yes" />
+                    </Component>
+                    <Directory Id="PluginNameDir" Name="${FBSTRING_PluginName}">
+                        <Component Id="PluginNameDirComp" Guid="*">
+                            <RemoveFolder Id="RemovePluginNameDir" On="uninstall" />
+                            <RegistryValue
+                                Root="HKCU"
+                                Key="SOFTWARE\${COMPANY_NAME}\${PLUGIN_NAME}"
+                                Name="Uninstall"
+                                Type="string"
+                                Value="${FBSTRING_PLUGIN_VERSION}"
+                                KeyPath="yes" />
+                        </Component>
+                        <Directory Id="INSTALLDIR" Name="${FBSTRING_PLUGIN_VERSION}">
+                            <Component Id="InstallDirComp" Guid="*">
+                                <RemoveFolder Id="RemoveInstallDir" On="uninstall" />
+                                <RegistryValue
+                                    Root="HKCU"
+                                    Key="SOFTWARE\${COMPANY_NAME}\${PLUGIN_NAME}\${FBSTRING_PLUGIN_VERSION}"
+                                    Name="Uninstall"
+                                    Type="string"
+                                    Value="${FBSTRING_PLUGIN_VERSION}"
+                                    KeyPath="yes" />
+                            </Component>
+                            <Component Id="FireWyrmNativeMessageHost" Guid="{7056973D-34AE-449E-8B30-981B05EAEC99}">
+                                <File Id="Manifest_template" Source="${FB_ROOT}\includes\${PLUGIN_CRX_NATIVEHOST_NAME}.template" Name="${PLUGIN_CRX_NATIVEHOST_NAME}.json" />
+                                <SystemTools:TemplateFile Id="Manifest_template_process_component" Source="[#Manifest_template]" Target="[INSTALLDIR]${PLUGIN_CRX_NATIVEHOST_NAME}.json" ExecuteOnInstall="yes" ExecuteOnReInstall="yes">
+                                    <SystemTools:TemplateFileProperty Id="FILENAME_property" Name="Filepath" Value="[INSTALLDIR]FireWyrmNativeMessageHost.exe" Escape="yes" />
+                                </SystemTools:TemplateFile>
+                                <File Id="FireWyrmNativeMessageHostExe" Source="$(var.BINSRC)\FireWyrmNativeMessageHost.exe" />
+                                <RegistryValue
+                                    Root="HKCU"
+                                    Id="NativeHostManifestRegEntry"
+                                    Key="SOFTWARE\Google\Chrome\NativeMessagingHosts\${PLUGIN_CRX_NATIVEHOST_NAME}"
+                                    Type="string"
+                                    Value="[INSTALLDIR]\${PLUGIN_CRX_NATIVEHOST_NAME}.json"
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="CComDll" Guid="0798b66b-2573-4ff5-a529-1988687c4f7a">
+                                <File Id="ccom.dll" Source="${FB_ROOT}\includes\ccom.dll" />
+                				<RegistryValue 
+                					Root="HKCU" 
+                					Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                					Name="Uninstall" 
+                					Type="string" 
+                					Value="1.8.5.225" 
+                					KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="CComDllSig" Guid="ed9b1256-e9c5-4ae8-be74-98ac7155e996">
+                                <File Id="ccom.dll.sig" Source="${FB_ROOT}\includes\ccom.dll.sig" />
+                                <RegistryValue 
+                                    Root="HKCU" 
+                                    Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                                    Name="Uninstall" 
+                                    Type="string" 
+                                    Value="1.8.5.225" 
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="CCom33Dll" Guid="8f4a94e3-83fa-4d45-bd81-de34a7c8b4f7">
+                                <File Id="ccom33.dll" Source="${FB_ROOT}\includes\ccom33.dll" />
+                                <RegistryValue 
+                                    Root="HKCU" 
+                                    Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                                    Name="Uninstall" 
+                                    Type="string" 
+                                    Value="1.8.5.225" 
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="CCom33DllSig" Guid="b8c9a826-044d-4703-bdc4-4e910cf9f02f">
+                                <File Id="ccom33.dll.sig" Source="${FB_ROOT}\includes\ccom33.dll.sig" />
+                                <RegistryValue 
+                                    Root="HKCU" 
+                                    Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                                    Name="Uninstall" 
+                                    Type="string" 
+                                    Value="1.8.5.225" 
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="SccrptnDll" Guid="c9e50c57-5c09-48f4-ab40-aa322e403778">
+                                <File Id="sccrptn.dll" Source="${FB_ROOT}\includes\sccrptn.dll" />
+                                <RegistryValue 
+                                    Root="HKCU" 
+                                    Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                                    Name="Uninstall" 
+                                    Type="string" 
+                                    Value="1.8.5.225" 
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="EtSdkDll" Guid="9484c39e-654b-4f96-9e0a-3902ae3f063a">
+                                <File Id="etsdk.dll" Source="${FB_ROOT}\includes\etsdk.dll" />
+                                <RegistryValue 
+                                    Root="HKCU" 
+                                    Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                                    Name="Uninstall" 
+                                    Type="string" 
+                                    Value="1.8.5.225" 
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="CadesComDll" Guid="7cd4d032-5e52-4114-9da0-a0f93c20c56a">
+                                <File Id="cadescom.dll" Source="${FB_ROOT}\includes\cadescom.dll" />
+                                <RegistryValue 
+                                    Root="HKCU" 
+                                    Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                                    Name="Uninstall" 
+                                    Type="string" 
+                                    Value="1.8.5.225" 
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="pkimgmtDll" Guid="63e39279-34be-464a-99b8-6ad7e6c93c37">
+                                <File Id="pkimgmt.dll" Source="${FB_ROOT}\includes\pkimgmt.dll" />
+                                <RegistryValue 
+                                    Root="HKCU" 
+                                    Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                                    Name="Uninstall" 
+                                    Type="string" 
+                                    Value="1.8.5.225" 
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="tspapimgmtDll" Guid="f12a144d-632c-47d8-b167-f5c1e8050f39">
+                                <File Id="tspapimgmt.dll" Source="${FB_ROOT}\includes\tspapimgmt.dll" />
+                                <RegistryValue 
+                                    Root="HKCU" 
+                                    Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                                    Name="Uninstall" 
+                                    Type="string" 
+                                    Value="1.8.5.225" 
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <Component Id="tspcomDll" Guid="c78abecb-30cf-45b3-b5ff-67f759d08217">
+                                <File Id="tspcom.dll" Source="${FB_ROOT}\includes\tspcom.dll" />
+                                <RegistryValue 
+                                    Root="HKCU" 
+                                    Key="SOFTWARE\\CabinetPlugin\1.8.5.225" 
+                                    Name="Uninstall" 
+                                    Type="string" 
+                                    Value="1.8.5.225" 
+                                    KeyPath="yes" />
+                            </Component>
+
+                            <!-- Put Additional files here: -->
+                            <!-- example:
+                            <Component Id="UniqueComponentId" Guid="*">
+                                <File Id="uniqueFileId" KeyPath="yes" Source="SourceDir\filename.ext" />
+                            </Component>
+                            /example -->
+                            <!--  -->
+                        </Directory>
+                    </Directory>
+                </Directory>
+            </Directory>
+        </Directory>
+
+        <Feature Id="MainPluginFeature" Title="${FBSTRING_ProductName}" Level="1">
+            <ComponentRef Id="InstallDirComp"/>
+            <ComponentRef Id="PluginNameDirComp"/>
+            <ComponentRef Id="CompanyDirComp"/>
+            <ComponentGroupRef Id="PluginDLLGroup"/>
+            <ComponentRef Id="FireWyrmNativeMessageHost"/>
+	    <!-- Extra components -->
+            <ComponentRef Id="CComDll"/>
+            <ComponentRef Id="CComDllSig"/>
+            <ComponentRef Id="CCom33Dll"/>
+            <ComponentRef Id="CCom33DllSig"/>
+            <ComponentRef Id="SccrptnDll"/>
+            <ComponentRef Id="EtSdkDll"/>
+            <ComponentRef Id="CadesComDll"/>
+            <ComponentRef Id="pkimgmtDll"/>
+            <ComponentRef Id="tspapimgmtDll"/>
+            <ComponentRef Id="tspcomDll"/>
+        </Feature>
+    </Product>
+</Wix>
