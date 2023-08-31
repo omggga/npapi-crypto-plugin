@@ -1,0 +1,1 @@
+signtool sign /f D:/dev/GitLab/FireBreath-20a/projects/CabinetPlugin2/sign/certificate1.pfx /p 12345 /t http://timestamp.verisign.com/scripts/timestamp.dll D:/dev/GitLab/FireBreath-20a/projects/CabinetPlugin2/firebreath/bin/CabinetPlugin2/Debug/CabinetPlugin2.msi
