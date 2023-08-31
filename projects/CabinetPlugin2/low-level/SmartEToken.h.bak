@@ -1,0 +1,3218 @@
+/*
+ SlotEToken.h : ������� ��� ������ � eToken ��� ������ ���������� CryptoCOM.
+
+ $Name:  $
+ $Revision: 1.1.2.2 $
+ $Date: 2008/10/10 15:38:07 $
+ */
+
+#pragma once
+
+#ifdef _DEBUG
+#pragma message("Including: " __FILE__)
+#endif
+
+// CCOM
+//
+#include <tools/CCOM/ccom.h>
+#include <tools/CCOM/ccom_extra.h>
+#include <tools/eToken/pkcs11.h>
+#include <tools/eToken/eTSAPI.h>
+
+// 
+//
+#include <SlotUtil.h>
+#include <SlotAsn.h>
+///#include <alg/Alg_1_8_8.h>
+///#include <resources/er_slot.h>
+#include <low-level/SmartXml.h>
+#include <dialogs/SlotPswDialog.h>
+
+#pragma comment(lib, "Winscard.lib" )
+
+
+#define _ETOKEN_ROOT (L"f45d")
+#define _ETOKEN_META_FILE_PREFIX (L"ff")
+#define _ETOKEN_CNTDIR_PREFIX (L"a")
+#define _ETOKEN_KEYDIR_PREFIX (L"b")
+//
+#define _ETOKEN_META_FILE (L"ff01")
+
+#define _ETOKEN_PORT_START (0)
+#define _ETOKEN_PORT_EDGE (1)
+
+#ifndef _ETOKEN_PATH_LEN
+#define _ETOKEN_PATH_LEN (4)
+#endif
+
+
+namespace  {
+
+
+
+	// ===========================================================================================
+	// PKCS#11 
+
+	struct PKCS11_eToken 
+	{
+		static const int NoSlotId = -1;
+
+		int SlotId;
+
+		bool LoggedIn; 
+
+		CK_SESSION_HANDLE hSession; 
+
+		void* pseCtx; 
+
+		string Pin; 
+
+		inline void Clear()
+		{
+			SlotId = NoSlotId; 
+			LoggedIn = false; 
+			hSession = 0; 
+			pseCtx = 0; 
+		}
+
+		PKCS11_eToken() 
+		{
+			Clear(); 
+		}
+
+		inline void Disconnect() 
+		{
+			try
+			{
+				// ..... 
+				//
+				// Clear(); 
+			}
+			_Catch() 
+		}
+
+		~PKCS11_eToken() 
+		{
+			Disconnect(); 
+		}
+
+		inline bool IsPresent()
+		{
+			return SlotId == NoSlotId; 
+		}
+	};
+
+
+
+	class PKCS11_Manager 
+	{
+	public:
+		SharedArray<PKCS11_eToken> eTokens; 
+
+		PKCS11_eToken& eTokenBySlot(int slotId)
+		{
+			try
+			{
+				Touch_eToken(slotId);
+				//
+				PKCS11_eToken& eToken = eTokens[slotId]; 
+				//
+				return eToken; 
+			}
+			_Catch() 
+		}
+
+		inline Map<int, int>& eTokenGlossary() 
+		{
+			static Map<int, int> s_eTokenGlossary; 
+			return s_eTokenGlossary; 
+		}
+
+		inline void EnterContext(int slotId) 
+		{
+			try
+			{ 
+				int threadId = (int)GetCurrentThreadId();
+				eTokenGlossary()[threadId] = slotId; 
+			}
+			_Catch() 
+		}
+
+		inline void ReleaseContext() 
+		{
+			try
+			{ 
+				int threadId = (int)GetCurrentThreadId();
+				if (eTokenGlossary().ContainsKey(threadId))
+				{
+					eTokenGlossary().Remove(threadId); 
+				}
+			}
+			_Catch() 
+		}
+
+		inline Map<int, string>& CtxPwdGlossary() 
+		{
+			static Map<int, string> s_CtxPwdGlossary; 
+			return s_CtxPwdGlossary; 
+		}
+
+		inline void EnterCtxPwdContext(void* pseCtx, const string& p)
+		{
+			try
+			{ 
+				int threadId = (int)GetCurrentThreadId();
+				CtxPwdGlossary()[threadId] = p; 
+				//
+				PSE_CTX_set_passwd_callback(pseCtx, PKCS11_Manager::key_container_pwd_cb);
+			}
+			_Catch() 
+		}
+
+		inline void ReleaseCtxPwdContext() 
+		{
+			try
+			{ 
+				int threadId = (int)GetCurrentThreadId();
+				if (CtxPwdGlossary().ContainsKey(threadId))
+				{
+					CtxPwdGlossary().Remove(threadId); 
+				}
+			}
+			_Catch() 
+		}
+
+		inline string ContextCtxPwd() 
+		{
+			try
+			{
+				int threadId = (int)GetCurrentThreadId();
+				if (CtxPwdGlossary().ContainsKey(threadId))
+				{
+					return CtxPwdGlossary()[threadId]; 
+				}
+				else
+				{
+					throw MethodError(L"�������� ���������� ��������� ���������� �� ��������������� (TH)"); 
+				}
+			}
+			_Catch() 
+		}
+
+		inline int ContextSlotId() 
+		{
+			try
+			{
+				int threadId = (int)GetCurrentThreadId();
+				if (eTokenGlossary().ContainsKey(threadId))
+				{
+					return eTokenGlossary()[threadId]; 
+				}
+				else
+				{
+					throw MethodError(L"�������� eToken �� ��������������� (TH)"); 
+				}
+			}
+			_Catch() 
+		}
+
+		inline PKCS11_eToken& ContextEToken() 
+		{
+			try
+			{
+				return eTokens[ContextSlotId()]; 
+			}
+			_Catch() 
+		}
+
+		inline string ContextPin() 
+		{
+			try
+			{
+				int slotId = ContextSlotId(); 
+				PKCS11_eToken& eToken = eTokenBySlot(slotId); 
+				if (!eToken.IsPresent())
+				{
+					string errMsg = FormatStr(L"eToken slotId=%d �� ���������", (int)slotId );
+					throw MethodError(errMsg); 
+				}
+				return eToken.Pin; 
+			}
+			_Catch() 
+		}
+
+		inline void SetPin(int slotId, const string& pinValue) 
+		{
+			try
+			{
+				PKCS11_eToken& eToken = eTokenBySlot(slotId); 
+				eToken.Pin = pinValue; 
+			}
+			_Catch() 
+		}
+
+		inline void RemovePin(int slotId) 
+		{
+			try
+			{
+				PKCS11_eToken& eToken = eTokenBySlot(slotId); 
+				eToken.Pin = L""; 
+			}
+			_Catch() 
+		}
+
+#		ifndef _MAX_TOKEN_SLOT 
+#		define _MAX_TOKEN_SLOT 1 
+#		endif 
+
+		inline void SetAllPinsTo(const string& pinValue) 
+		{
+			try
+			{
+				try
+				{
+					for (int k = 0; k <= _MAX_TOKEN_SLOT; k++)
+					{
+						SetPin(k, pinValue); 
+					}
+				}
+				catch(::Exception e)
+				{
+					OutputDebugStringW(e.ToString() + L"\n!!!\n"); 
+				}
+				catch(...)
+				{
+					OutputDebugStringW(L"!!!\nProtocol: ����������� ������!!!\n"); 
+				}
+			}
+			_Catch()
+		}
+
+		inline static int etoken_passwd_cb(char *buf, int num, int w, void *userdata)
+		{
+			try
+			{
+				//int j;
+				//
+				CStringA p(PKCS11_Manager::Acquire().ContextPin());
+				memcpy(buf, p.GetString(), p.GetLength());
+				buf[p.GetLength()] = 0;
+				//
+				return p.GetLength(); 
+			}
+			_Catch() 
+		}
+
+		inline static int key_container_pwd_cb(char *buf, int num, int w, void *u) 
+		{
+			try
+			{
+				CStringA p(PKCS11_Manager::Acquire().ContextCtxPwd());
+				memcpy(buf, p.GetString(), p.GetLength());
+				buf[p.GetLength()] = 0;
+				//
+				return p.GetLength(); 
+			}
+			_Catch() 
+		}
+
+
+	public:
+		inline static CRITICAL_SECTION& CriticalSection() 
+		{
+			static bool crits_f = false;
+			static CRITICAL_SECTION crits; 
+			if (! crits_f)
+			{
+				InitializeCriticalSection(&crits); 
+				crits_f = true;
+			}
+			return crits; 
+		}
+
+		class Lock
+		{
+		public:
+			Lock()
+			{
+				EnterCriticalSection(&CriticalSection());
+			}
+
+			~Lock()
+			{
+				LeaveCriticalSection(&CriticalSection());
+			}
+		};
+
+		inline static PKCS11_Manager& Acquire() 
+		{
+			static SharedPtr<PKCS11_Manager> pkcs11Ptr;
+			//
+			Lock lock;
+			//
+			if (pkcs11Ptr.IsEmpty())
+			{
+				pkcs11Ptr = new PKCS11_Manager();
+			}
+			PKCS11_Manager& pkcs11 = *pkcs11Ptr;
+			return pkcs11; 
+		}
+
+#		define PKCS11_Manager_() PKCS11_Manager::Acquire() 
+
+	protected:
+		// ----
+		// ������ 
+
+		CString m_DllPath; 
+
+		CK_FUNCTION_LIST_PTR	pFunctionList;
+
+		CK_C_GetFunctionList	pGFL; 
+
+	public:
+		bool					wasInit; 
+
+		HANDLE					hThread; 
+
+		inline void Clear() 
+		{
+			m_DllPath = _T("etpkcs11.DLL"); 
+			//
+			/// f_C_GetFunctionList = NULL; 
+			f_SAPI_GetTokenInfo = NULL;
+			//
+			pFunctionList = 0; 
+			pGFL = 0; 
+			wasInit = false; 
+			hThread = 0; 
+		}
+
+		// ---- 
+		// ����� ������� PKCS#11 
+
+		static DWORD __stdcall TokenNotifyThread(void*) 
+		{
+			try
+			{
+				PKCS11_Manager& ET = Acquire(); 
+				//
+				while (true) 
+				{
+					DWORD slotId;
+					int res = ET.pFunctionList->C_WaitForSlotEvent(0, &slotId, 0); 
+					//
+					if (res == CKR_OK) 
+					{
+						///displaysTokenInfo(slotId);
+					}
+					else 
+					{
+						throw MethodError(L"������ ��� ��������� ������� eToken");  
+					}
+					//
+					Sleep(100); 
+				}
+				return 0;
+			}
+			_Catch() // TODO: ���������������� ::Exception 
+		}
+
+		// ----
+		// ������ 
+
+		HINSTANCE ETSAPI_hLib; 
+
+		typedef CK_RV (*t_SAPI_GetTokenInfo)(CK_SLOT_ID, CK_ATTRIBUTE_PTR, CK_ULONG);
+
+		t_SAPI_GetTokenInfo f_SAPI_GetTokenInfo;
+
+		typedef CK_RV (*t_SAPI_SetTokenName)(CK_SLOT_ID, CK_CHAR_PTR);
+
+		t_SAPI_SetTokenName f_SAPI_SetTokenName;
+
+		inline void LoadETSAPI()
+		{
+			try
+			{
+				CString path = _T("etsapi.dll"); 
+				ETSAPI_hLib = LoadLibrary(path); 
+				if (! ETSAPI_hLib) 
+				{
+					throw MethodInfoExc(L"������ eToken: ���������� " + _W(path) + L" �����������"); 
+				}
+				//
+				(FARPROC&)f_SAPI_GetTokenInfo = GetProcAddress(ETSAPI_hLib, "SAPI_GetTokenInfo");
+				if (! f_SAPI_GetTokenInfo) 
+				{
+					throw MethodInfoExc(L"������ eToken: function: SAPI_GetTokenInfo"); 
+				}
+				//
+				(FARPROC&)f_SAPI_SetTokenName = GetProcAddress(ETSAPI_hLib, "SAPI_SetTokenName");
+				if (! f_SAPI_SetTokenName) 
+				{
+					throw MethodInfoExc(L"������ eToken: function: SAPI_SetTokenName"); 
+				}
+			}
+			_Catch() 
+		}
+
+		XmlElement OutName(XmlElement& E, const char* name) // starts attribute by name 
+		{
+			try
+			{
+				XmlDocument doc = E.OwnerDocument(); 
+				XmlElement A = doc.CreateElement(L"",L"Attribute",L""); 
+				//
+				A.SetAttribute(L"Name",_W(_A(name))); 
+				//
+				E.AppendChild(A); 
+				//
+				return A; 
+			}
+			_Catch() 
+		}
+
+		BOOL CheckEmpty(CK_ATTRIBUTE* attr) // detect if attribute value is empty
+		{
+			try
+			{
+				if (attr->ulValueLen > 0) return FALSE;
+				else return TRUE;
+			}
+			_Catch() 
+		}
+
+		void OutString(XmlElement& E,CK_ATTRIBUTE* attr,const char* name) // print attribute value as a string
+		{ 
+			try
+			{
+				XmlElement A = OutName(E,name);
+				if (! CheckEmpty(attr)) 
+				{
+					A.InnerText() = _W(_A((const char*)attr->pValue));  
+				}
+				E.AppendChild(A); 
+			}
+			_Catch() 
+		}
+
+		void OutVersion(XmlElement& E,CK_ATTRIBUTE* attr,const char* name) // print attribute value as CK_VERSION
+		{ 
+			try
+			{
+				XmlElement A = OutName(E,name);
+				if (! CheckEmpty(attr)) 
+				{
+					CK_VERSION* v = (CK_VERSION*)attr->pValue;
+					A.SetAttribute(L"Major",FormatStr(L"%d", v->major)); 
+					A.SetAttribute(L"Minor",FormatStr(L"%d", v->minor)); 
+				}
+				E.AppendChild(A); 
+			}
+			_Catch() 
+		}
+
+		void OutDecimal(XmlElement& E,CK_ATTRIBUTE* attr,const char* name) // print attribute value as a decimal number
+		{ 
+			try
+			{
+				XmlElement A = OutName(E,name);
+				if (! CheckEmpty(attr)) 
+				{
+					A.InnerText() = FormatStr(L"%d", *((int*)attr->pValue) ); 
+					//
+					// Specials 
+					//
+					if (attr->type == CKA_SAPI_COLOR) 
+					{
+						string color; 
+						string cssColor; 
+						//
+						switch (*((int*)attr->pValue)) 
+						{
+						case CK_SAPI_COLOR_RED:
+							color = L"red"; break; 
+						case CK_SAPI_COLOR_BLUE:
+							color = L"blue"; break; 
+						case CK_SAPI_COLOR_GREEN:
+							color = L"green"; break; 
+						case CK_SAPI_COLOR_TANGERINE:
+							color = L"tangerine"; cssColor = L"#FFA500"; break; 
+						case CK_SAPI_COLOR_ICE:
+							color = L"ice"; cssColor = L"#FEFEFF"; break; 
+						case CK_SAPI_COLOR_PURPLE:
+							color = L"purple"; cssColor = L"#800080"; break; 
+						case CK_SAPI_COLOR_LIME:
+							color = L"lime"; cssColor = L"#BFFF00"; break; 
+						case CK_SAPI_COLOR_PINK:
+							color = L"pink"; cssColor = L"#FFC0CB"; break; 
+						case CK_SAPI_COLOR_BLACK:
+							color = L"black"; break; 
+						}
+						//
+						if (cssColor.GetLength() == 0) cssColor = color; 
+						//
+						if (color.GetLength() > 0) 
+						{
+							A.SetAttribute(L"Color", color); 
+							A.SetAttribute(L"CssColor", cssColor); 
+						}
+					}
+				}
+				E.AppendChild(A); 
+			}
+			_Catch() 
+		}
+
+		void OutHex(XmlElement& E,CK_ATTRIBUTE* attr,const char* name)  // print attribute value as a hexadecimal number
+		{ 
+			try
+			{
+				XmlElement A = OutName(E,name); 
+				if (! CheckEmpty(attr)) 
+				{
+					A.InnerText() = FormatStr(L"%d", int(*((unsigned int*)attr->pValue)) ); 
+					A.SetAttribute(L"Hex", FormatStr(L"0x%08x", int(*((unsigned int*)attr->pValue)) )); 
+				}
+				E.AppendChild(A); 
+			}
+			_Catch() 
+		}
+
+		void OutDate(XmlElement& E,CK_ATTRIBUTE* attr,const char* name)  // print attribute value as CK_DATE
+		{ 
+			try
+			{
+				XmlElement A = OutName(E,name);
+				if (! CheckEmpty(attr)) 
+				{
+					CK_DATE* d = (CK_DATE*)attr->pValue; 
+					string dateStr = FormatStr(L"%c%c.%c%c",
+						d->day[0], d->day[1], 
+						d->month[0], d->month[1] 
+						) 
+					+ FormatStr(L".%c%c%c%c", 
+						d->year[0], d->year[1], d->year[2], d->year[3] 
+						); 
+					A.InnerText() = dateStr; 
+				}
+				E.AppendChild(A); 
+			}
+			_Catch() 
+		}
+
+		void OutArray(XmlElement& E, CK_ATTRIBUTE* attr, const char* name)  
+			// print attribute value as an array of bytes
+		{ 
+			try
+			{
+				XmlElement A = OutName(E,name);
+				if (! CheckEmpty(attr)) 
+				{
+					XmlDocument doc = E.OwnerDocument(); 
+					//
+					string hexStr = L""; 
+					for (CK_ULONG i = 0; i < attr->ulValueLen; i++) 
+					{
+						hexStr += FormatStr(L"%02x", int(((BYTE*)(attr->pValue))[i]) ); 
+						//
+						XmlElement Byte_E = doc.CreateElement(L"",L"Byte",L""); 
+						Byte_E.SetAttribute(L"Value",FormatStr(L"%u", int(((BYTE*)(attr->pValue))[i]) )); 
+						A.AppendChild(Byte_E); 
+					}
+					A.InnerText() = hexStr; 
+					A.SetAttribute(L"Hex",hexStr); 
+				}
+				E.AppendChild(A); 
+			}
+			_Catch() 
+		}
+
+		void OutBoolean(XmlElement& E,CK_ATTRIBUTE* attr, const char* name) // print boolean attribute value
+		{ 
+			try
+			{
+				XmlElement A = OutName(E,name);
+				if (! CheckEmpty(attr)) 
+				{
+					A.InnerText() = _W(*((CK_BBOOL*)attr->pValue) ? L"true" : L"false"); 
+				}
+				E.AppendChild(A); 
+			}
+			_Catch() 
+		}
+
+		CK_ATTRIBUTE* FindAttr(CK_ATTRIBUTE* Template, int nTemplate, CK_ATTRIBUTE_TYPE type)
+		{
+			try
+			{
+				for (int i = 0; i < nTemplate; i++, Template++)
+				{
+					if (Template->type == type) return Template;
+				}
+				return NULL;
+			}
+			_Catch() 
+		}
+
+		void ReadTokenInfo_SAPI(XmlElement& eToken_E,CK_SLOT_ID SlotID)
+		{
+			try
+			{
+				char product_name[256];
+				char model[256];
+				char hw_internal[256];
+				char card_id[256];
+				char serial[256];
+				//
+				CK_ULONG fw_revision;
+				CK_ULONG case_model;
+				CK_ULONG token_id;
+				CK_ULONG card_type;
+				CK_ULONG color;
+				//
+				CK_VERSION fw_version;
+				CK_VERSION hw_version;
+				CK_VERSION card_version;
+				//
+				CK_DATE production_date;
+				//
+				CK_BBOOL has_battery;
+				CK_BBOOL has_lcd;
+				CK_BBOOL has_user;
+				CK_BBOOL has_so;
+				CK_BBOOL fips;
+				CK_BBOOL fips_supported;
+				CK_BBOOL init_pin_req;
+				CK_BBOOL rsa_2048;
+				CK_BBOOL rsa_2048_supported;
+				CK_BBOOL hmac_sha1;
+				CK_BBOOL hmac_sha1_supported;
+				CK_BBOOL real_color;
+				CK_BBOOL may_init;
+				//
+				// template declaration
+				CK_ATTRIBUTE Template[] = 
+				{
+					{CKA_SAPI_PRODUCT_NAME,        product_name,         sizeof(product_name)},
+					{CKA_SAPI_MODEL,               model,                sizeof(model)},
+					{CKA_SAPI_FW_VERSION,          &fw_version,          sizeof(CK_VERSION)},
+					{CKA_SAPI_FW_REVISION,         &fw_revision,         sizeof(CK_ULONG)},
+					{CKA_SAPI_HW_VERSION,          &hw_version,          sizeof(CK_VERSION)},
+					{CKA_SAPI_HW_INTERNAL,         hw_internal,          sizeof(hw_internal)},
+					{CKA_SAPI_PRODUCTION_DATE,     &production_date,     sizeof(CK_DATE)},
+					{CKA_SAPI_CASE_MODEL,          &case_model,          sizeof(CK_ULONG)},
+					{CKA_SAPI_TOKEN_ID,            &token_id,            sizeof(CK_ULONG)},
+					{CKA_SAPI_CARD_ID,             card_id,              sizeof(card_id)},
+					{CKA_SAPI_CARD_TYPE,           &card_type,           sizeof(CK_ULONG)},
+					{CKA_SAPI_CARD_VERSION,        &card_version,        sizeof(CK_VERSION)},
+					{CKA_SAPI_SERIAL,              serial,               sizeof(serial)},
+					{CKA_SAPI_COLOR,               &color,               sizeof(CK_ULONG)},
+					{CKA_SAPI_HAS_BATTERY,         &has_battery,         sizeof(CK_BBOOL)},
+					{CKA_SAPI_HAS_LCD,             &has_lcd,             sizeof(CK_BBOOL)},
+					{CKA_SAPI_HAS_USER,            &has_user,            sizeof(CK_BBOOL)},
+					{CKA_SAPI_HAS_SO,              &has_so,              sizeof(CK_BBOOL)},
+					{CKA_SAPI_FIPS,                &fips,                sizeof(CK_BBOOL)},
+					{CKA_SAPI_FIPS_SUPPORTED,      &fips_supported,      sizeof(CK_BBOOL)},
+					{CKA_SAPI_INIT_PIN_REQ,        &init_pin_req,        sizeof(CK_BBOOL)},
+					{CKA_SAPI_RSA_2048,            &rsa_2048,            sizeof(CK_BBOOL)},
+					{CKA_SAPI_RSA_2048_SUPPORTED,  &rsa_2048_supported,  sizeof(CK_BBOOL)},
+					{CKA_SAPI_HMAC_SHA1,           &hmac_sha1,           sizeof(CK_BBOOL)},
+					{CKA_SAPI_HMAC_SHA1_SUPPORTED, &hmac_sha1_supported, sizeof(CK_BBOOL)},
+					{CKA_SAPI_REAL_COLOR,          &real_color,          sizeof(CK_BBOOL)},
+					{CKA_SAPI_MAY_INIT,            &may_init,            sizeof(CK_BBOOL)},
+				};
+				//
+				// size of template
+				int nTemplate = sizeof(Template)/sizeof(CK_ATTRIBUTE);
+				//
+				// acquire all attributes
+				if (CKR_OK != f_SAPI_GetTokenInfo(SlotID, Template, nTemplate)) 
+				{
+					throw MethodError(L"������: SAPI_GetTokenInfo");
+				}
+				//
+				CK_ATTRIBUTE* attr;
+				//
+				// printing
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_PRODUCT_NAME);         OutString (eToken_E, attr, "CKA_SAPI_PRODUCT_NAME");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_MODEL);                OutString (eToken_E, attr, "CKA_SAPI_MODEL");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_FW_VERSION);           OutVersion(eToken_E, attr, "CKA_SAPI_FW_VERSION");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_FW_REVISION);          OutDecimal(eToken_E, attr, "CKA_SAPI_FW_REVISION");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_HW_VERSION);           OutVersion(eToken_E, attr, "CKA_SAPI_HW_VERSION");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_HW_INTERNAL);          OutArray  (eToken_E, attr, "CKA_SAPI_HW_INTERNAL");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_PRODUCTION_DATE);      OutDate   (eToken_E, attr, "CKA_SAPI_PRODUCTION_DATE");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_CASE_MODEL);           OutDecimal(eToken_E, attr, "CKA_SAPI_CASE_MODEL");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_TOKEN_ID);             OutHex    (eToken_E, attr, "CKA_SAPI_TOKEN_ID");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_CARD_ID);              OutArray  (eToken_E, attr, "CKA_SAPI_CARD_ID");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_CARD_TYPE);            OutDecimal(eToken_E, attr, "CKA_SAPI_CARD_TYPE");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_CARD_VERSION);         OutVersion(eToken_E, attr, "CKA_SAPI_CARD_VERSION");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_SERIAL);               OutArray  (eToken_E, attr, "CKA_SAPI_SERIAL");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_COLOR);                OutDecimal(eToken_E, attr, "CKA_SAPI_COLOR");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_HAS_BATTERY);          OutBoolean(eToken_E, attr, "CKA_SAPI_HAS_BATTERY");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_HAS_LCD);              OutBoolean(eToken_E, attr, "CKA_SAPI_HAS_LCD");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_HAS_USER);             OutBoolean(eToken_E, attr, "CKA_SAPI_HAS_USER");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_HAS_SO);               OutBoolean(eToken_E, attr, "CKA_SAPI_HAS_SO");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_FIPS);                 OutBoolean(eToken_E, attr, "CKA_SAPI_FIPS");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_FIPS_SUPPORTED);       OutBoolean(eToken_E, attr, "CKA_SAPI_FIPS_SUPPORTED");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_INIT_PIN_REQ);         OutBoolean(eToken_E, attr, "CKA_SAPI_INIT_PIN_REQ");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_RSA_2048);             OutBoolean(eToken_E, attr, "CKA_SAPI_RSA_2048");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_RSA_2048_SUPPORTED);   OutBoolean(eToken_E, attr, "CKA_SAPI_RSA_2048_SUPPORTED");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_HMAC_SHA1);            OutBoolean(eToken_E, attr, "CKA_SAPI_HMAC_SHA1");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_HMAC_SHA1_SUPPORTED);  OutBoolean(eToken_E, attr, "CKA_SAPI_HMAC_SHA1_SUPPORTED");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_REAL_COLOR);           OutBoolean(eToken_E, attr, "CKA_SAPI_REAL_COLOR");
+				attr = FindAttr(Template, nTemplate, CKA_SAPI_MAY_INIT);             OutBoolean(eToken_E, attr, "CKA_SAPI_MAY_INIT");
+			}
+			_Catch() 
+		}
+
+	public:
+		inline PKCS11_eToken& LoginEToken(int slotId,const string& userPass=L"",const string admPass=L"",
+			bool throwOnError=false
+			) 
+		{
+			CheckInit(); 
+			//
+			PKCS11_eToken& t = eTokens[slotId]; 
+			//
+			try
+			{
+				try
+				{
+					if (t.hSession) return t; // ������! 
+					//
+					// ��������� ������, ����� ��������� C_Login 
+					//
+					CK_RV rv = pFunctionList->C_OpenSession(
+						slotId,
+						CKF_RW_SESSION | CKF_SERIAL_SESSION, /// CK_FLAGS flags, /* from CK_SESSION_INFO */ 
+						0, /// CK_VOID_PTR           pApplication,  /* passed to callback */
+						0, /// CK_NOTIFY             Notify,        /* callback function */
+						&t.hSession      /* gets session handle */
+						);
+					if (rv != 0) 
+					{
+						throw MethodError(L"������ eToken: function: C_OpenSession"); 
+					}
+					//
+					//rv = pFunctionList->C_Login(t.hSession, CKU_USER, (CK_CHAR*)"1234567890", 10); 
+					//if (rv!=0) throw MethodError(L"C_Login failed"); 
+					//
+					CStringA admPassA(admPass);
+					CStringA userPassA(userPass);
+					//
+					if (admPass.GetLength() == 0)
+					{
+						if (userPass.GetLength() == 0)
+						{
+							if (t.Pin.GetLength() > 0)
+							{
+								userPassA = _T(t.Pin); 
+							}
+							else
+							{
+								userPassA = _A(PasswordDialog::GetDevicePIN(L"eToken")); 
+								SetPin(slotId, _W(userPassA)); 
+							}
+						}
+					}
+					//
+					admPassA = userPassA;
+					//
+					////if (admPassA.GetLength() == 0) admPassA = "aqwerty"; 
+					////if (userPassA.GetLength() == 0) userPassA = "12345"; 
+					//
+					//rv = pFunctionList->C_Login(t.hSession, CKU_SO, 
+					//	(CK_CHAR*)admPass.GetBuffer(), admPass.GetLength()); 
+					//if (rv != 0) 
+					//{
+					//	throw MethodError(FormatStr(L"������ eToken: function: C_Login: %d", (int)rv ));  
+					//}
+					//
+					rv = pFunctionList->C_Login(t.hSession, CKU_USER, 
+						(CK_CHAR*)userPassA.GetBuffer(), userPassA.GetLength() 
+						); 
+
+					if (rv == CKR_USER_PIN_NOT_INITIALIZED)
+					{
+						CK_RV rv = pFunctionList->C_Login(t.hSession, CKU_SO, 
+							(CK_CHAR*)admPassA.GetBuffer(), admPassA.GetLength() 
+							); 
+						if (rv != 0) 
+						{
+							RemovePin(slotId); 
+							throw MethodError(FormatStr(L"������ eToken: function: C_Login: %d", (int)rv ));  
+						}
+						//
+						rv = pFunctionList->C_InitPIN(t.hSession, 
+							(CK_CHAR*)userPassA.GetBuffer(), userPassA.GetLength() 
+							); 
+						if (rv != 0) 
+						{
+							RemovePin(slotId); 
+							throw MethodError(FormatStr(L"������ eToken: function: C_InitPIN: %d", (int)rv ));  
+						}
+						//
+						rv = pFunctionList->C_Logout(t.hSession); 
+						if (rv != 0) 
+						{
+							RemovePin(slotId); 
+							throw MethodError(FormatStr(L"������ eToken: function: C_Logout: %d", (int)rv ));  
+						}
+						//
+						rv = pFunctionList->C_Login(t.hSession, CKU_USER, 
+							(CK_CHAR*)userPassA.GetBuffer(), userPassA.GetLength() 
+							); 
+						if (rv != 0) 
+						{
+							RemovePin(slotId); 
+							throw MethodError(FormatStr(L"������ eToken: function: C_Login: %d", (int)rv ));  
+						}
+					}
+					else if (rv != 0) 
+					{
+						RemovePin(slotId); 
+						throw MethodError(FormatStr(L"������ eToken: function: C_Login: %d", (int)rv ));  
+					}
+
+
+
+
+					//if (false) 
+					//{
+					//	CK_BBOOL bTrue     = 1;
+					//	CK_ULONG classType = CKO_DATA;
+					//	CK_OBJECT_HANDLE dataObj; 
+					//	CStringA label1("Signing Certificate");
+					//	CStringA v1("CN=������ ��CN=Users,DC=,DC=ru"); 
+					//	//
+					//	CK_ATTRIBUTE m[] = 
+					//	{
+					//		{CKA_CLASS, &classType, sizeof(classType)},
+					//	};
+					//	//
+					//	rv = pFunctionList->C_FindObjectsInit(t.hSession, 
+					//		m, sizeof(m)/sizeof(CK_ATTRIBUTE)
+					//		); 
+					//	if (rv != 0) 
+					//	{
+					//		throw MethodError(FormatStr(L"������ eToken: function: C_FindObjectsInit: %d", (int)rv )); 
+					//	}
+					//	//
+					//	CK_ULONG objIndex;
+					//	//
+					//	do
+					//	{
+					//		rv = pFunctionList->C_FindObjects(t.hSession, 
+					//			&dataObj, 10, &objIndex
+					//			); 
+					//		if (rv != 0) 
+					//		{
+					//			throw MethodError(FormatStr(L"������ eToken: function: C_FindObjectsInit: %d", (int)rv )); 
+					//		}
+					//		//
+					//		++objIndex; 
+					//	}
+					//	while (rv == 0);
+					//	//
+					//	TRACE_LOG1(_T("N: %d"), (int)objIndex );
+					//}
+					//
+					return t; 
+				}
+				_Catch() 
+			}
+			catch(...)
+			{
+				t.Clear();
+				//
+				if (throwOnError)
+				{
+					throw; 
+				}
+				else
+				{
+					return t; 
+				}
+			}
+		}
+
+		inline void CreateETokenObject(int slotId, 
+			CK_ULONG classType,
+			CK_BBOOL isToken,
+			CK_BBOOL isPrivate,
+			const string& label,
+			const string& subject,
+			Blob value, 
+			CK_ULONG certType=CKC_X_509
+			)
+		{
+			try
+			{
+				CheckInit(); 
+				//
+				PKCS11_eToken& t = eTokens[slotId]; 
+				//
+				SharedArray<Blob> a1 = FindETokenObjects(slotId, CKO_DATA, isToken, label); 
+				if (a1.Length() > 0)
+				{
+					// deleting old object...
+					//
+				}
+				//
+				//CK_BBOOL bFalse    = 0;
+				//CK_BBOOL bTrue     = 1;
+				//CK_ULONG classType = CKO_CERTIFICATE;
+				//CK_ULONG certType  = CKC_X_509;
+				//CK_OBJECT_HANDLE certObj; 
+				//CStringA label1("Signing Certificate");
+				//CStringA subject1("CN=������ ��CN=Users,DC=,DC=ru"); 
+				//
+				CK_OBJECT_HANDLE Obj; 
+				CStringA label1(label);
+				CStringA subject1(subject); 
+				//
+				CK_ATTRIBUTE m_cert[] = 
+					{
+						{CKA_CLASS, &classType, sizeof(classType)},
+						{CKA_TOKEN, &isToken, sizeof(isToken)},
+						{CKA_PRIVATE, &isPrivate, sizeof(isPrivate)},
+						{CKA_LABEL, label1.GetBuffer(), label1.GetLength()},
+						{CKA_CERTIFICATE_TYPE, &certType, sizeof(certType)},
+						{CKA_SUBJECT, subject1.GetBuffer(), subject1.GetLength()},
+						{CKA_VALUE, value.GetBuffer(), value.Length()}
+					};
+				//
+				CK_ATTRIBUTE m_0[] = 
+					{
+						{CKA_CLASS, &classType, sizeof(classType)},
+						{CKA_TOKEN, &isToken, sizeof(isToken)},
+						{CKA_PRIVATE, &isPrivate, sizeof(isPrivate)},
+						{CKA_LABEL, label1.GetBuffer(), label1.GetLength()},
+						{CKA_VALUE, value.GetBuffer(), value.Length()}
+					};
+				//
+				CK_ATTRIBUTE* m = (classType == CKO_CERTIFICATE) ? m_cert : m_0;
+				int mSize = (classType == CKO_CERTIFICATE) ? sizeof(m_cert) : sizeof(m_0);
+				//
+				CK_RV rv = pFunctionList->C_CreateObject(t.hSession, 
+					m, mSize/sizeof(CK_ATTRIBUTE), 
+					&Obj); 
+				if (rv != 0) 
+				{
+					throw MethodError(FormatStr(L"������ eToken: function: C_CreateObject: %d", (int)rv )); 
+				}
+			}
+			_Catch()
+		}
+
+		inline SharedArray<Blob> FindETokenObjects(int slotId, 
+			CK_ULONG classType,
+			CK_BBOOL isToken,
+			const string& search 
+			) 
+		{
+			try
+			{
+				CheckInit(); 
+				//
+				Lock lock; 
+				//
+				PKCS11_eToken& t = eTokens[slotId]; 
+				//
+				CStringA label1(search); 
+				//
+				SharedArray<Blob> result; 
+				//
+				CK_ATTRIBUTE search_template[]  = 
+				{ 
+					//{CKA_CLASS,            &classType , sizeof(classType)},
+					//{CKA_CERTIFICATE_TYPE, &certType,   sizeof(certType)},
+					//{CKA_TOKEN,            &isToken,      sizeof(isToken)  },
+					{CKA_LABEL, label1.GetBuffer(), label1.GetLength()} 	
+				};
+				//
+				CK_OBJECT_HANDLE hObject;
+				CK_ULONG foundObjects = 0;
+				//
+				if (CKR_OK == pFunctionList->C_FindObjectsInit(
+					t.hSession, 
+					search_template, sizeof(search_template)/sizeof(search_template[0])
+					))
+				{
+					bool firstTime = true;
+					while ((pFunctionList->C_FindObjects(t.hSession, &hObject, 1, &foundObjects) == CKR_OK)
+						&& foundObjects > 0)
+					{
+						if (firstTime)
+						{
+							// printf ("           <List of Certificate information>\n");
+							firstTime = false;
+						}
+						//
+						// Get some attributes: certificate Issuer,Subject,Value attributes...
+						//
+						CK_ATTRIBUTE V[] = 
+						{
+							{ CKA_LABEL,   NULL, 0 },
+							{ CKA_VALUE,   NULL, 0 },
+						};
+						//
+						Blob labelValue;
+						int labelLen = 0;
+						Blob value;
+						int valueLen = 0; 
+						//
+						if (CKR_OK == pFunctionList->C_GetAttributeValue(
+							t.hSession, 
+							hObject, 
+							V, sizeof(V)/sizeof(V[0])
+							))
+						{
+							labelLen = V[0].ulValueLen;
+							labelValue.Expand(labelLen);
+							V[0].pValue = labelValue.GetBuffer();
+							//
+							valueLen = V[1].ulValueLen;
+							value.Expand(valueLen);
+							V[1].pValue = value.GetBuffer();
+						}
+						//
+						if (CKR_OK == pFunctionList->C_GetAttributeValue(
+							t.hSession, 
+							hObject, 
+							V, sizeof(V)/sizeof(V[0])
+							))
+						{
+							//CopyMemory(labelValue.GetBuffer(), V[0].pValue, labelLen);  
+							labelValue.SetSize(labelLen);
+							//
+							//CopyMemory(value.GetBuffer(), V[0].pValue, valueLen); 
+							value.SetSize(valueLen);
+							//
+							result.Add(value); 
+						}
+					}
+				}
+				//
+				return result; 
+			}
+			_Catch()
+		}
+
+		inline string GetObjectLabel(const string& cat, const string& name) 
+		{
+			try
+			{
+				string label = _W(L" ") + cat + L" " + name; 
+				return label; 
+			}
+			_Catch()
+		}
+
+		inline void SaveObject(int slotId,
+			const string& label, Blob value, CK_ULONG classType, CK_BBOOL isPrivate, 
+			const string& subject=L""
+			) 
+		{
+			try
+			{
+				//CK_BBOOL bFalse    = 0; 
+				CK_BBOOL bTrue     = 1; 
+				//
+				CreateETokenObject(slotId, 
+					classType,
+					bTrue,
+					isPrivate,
+					label,
+					subject,
+					value 
+					);
+			}
+			_Catch() 
+		}
+
+		inline Blob ReadObject(int slotId, 
+			const string& label, 
+			CK_ULONG classType) 
+		{
+			try
+			{
+				//CK_BBOOL bFalse    = 0; 
+				//CK_BBOOL bTrue     = 1; 
+				//
+				SharedArray<Blob> a1 = FindETokenObjects(slotId, classType, 1, label); 
+				if (a1.Length() > 0)
+				{
+					return a1[0]; 
+				}
+				else
+				{
+					return Blob(); 
+				}
+			}
+			_Catch() 
+		}
+
+		inline void LoginFirstEToken() 
+		{
+			try
+			{
+				XmlDocument doc = GetETokenInfo(L""); 
+				//
+				XmlNodeList L = doc.SelectNodes(L"/*/EToken[@PinEntered = '1']"); 
+				if (L.Count() > 0) return; 
+				//
+				L = doc.SelectNodes(L"/*/EToken[@Label = '']"); 
+				if (L.Count() == 0) return; 
+				//
+				XmlElement f_eToken = L[0]; 
+				int f_slotId = _wtoi(f_eToken.GetAttribute(L"SlotId")); 
+				//
+				LoginEToken(f_slotId); 
+			}
+			_Catch() 
+		}
+
+		XmlDocument GetUserAuthContextInfo(const string& vXslUrl) 
+		{
+			try
+			{
+				XmlDocument doc;
+				//
+				//
+				return doc;
+			}
+			_Catch();
+		}
+
+
+
+		// ----
+		// eToken
+
+//#		define _ETOKEN_ROOT L"f45d"
+//#		define _ETOKEN_META_FILE L"f001"
+//#		define _ETOKEN_KEYDIR_PREFIX L"a"
+
+		inline static CStringA ETokenPath(int port, const string& path)
+		{
+			return FormatStr("etoken%d:/" + _A(path) ,(int)port ); 
+		}
+
+		inline static string RootPath()
+		{
+			return _W(_ETOKEN_ROOT); 
+		}
+
+		inline static string MetaPath()
+		{
+			return RootPath() + L"/" + _W(_ETOKEN_META_FILE); 
+		}
+
+#		define OID__META (L"1.2.643.6.2.1.5.2")
+#		define OID_KEY_LIST_INFO (L"1.2.643.6.2.1.5.3")
+#		define OID_KEY_LIST (L"1.2.643.6.2.1.5.3.11")
+
+	private:
+		AsnObject CreateNewMeta() 
+		{
+			try
+			{
+				AsnObject MetaO = AsnObject::NewSequence();
+				//
+				// Key Info
+				//
+				AsnObject KeyListPair = AsnObject::NewSequence();
+				KeyListPair.Add(AsnObject::NewInteger(0)); // � ������ 0 ������ 
+				KeyListPair.Add(AsnObject::NewSequence());
+				//
+				AsnObject KeyListO = AsnObject::NewSequence();
+				KeyListO.Add(KeyListPair);
+				//
+				AsnObject KeyListInfoPair = AsnObject::NewSequence(); 
+				KeyListInfoPair.Add(AsnObject(OID(OID_KEY_LIST)));
+				KeyListInfoPair.Add(KeyListO);
+				//
+				AsnObject KeyListInfoO = AsnObject::NewSequence();
+				KeyListInfoO.Add(AsnObject(OID(OID_KEY_LIST_INFO))); 
+				KeyListInfoO.Add(KeyListInfoPair); 
+				//
+				//  Meta
+				//
+				MetaO.Add(AsnObject(OID(OID__META))); 
+				MetaO.Add(KeyListInfoO); 
+				//
+				return MetaO; 
+			}
+			_Catch()
+		}
+
+		inline void OutputObject(const string& title, AsnObject& o) 
+		{
+#				ifdef _DEBUG
+				{
+					OutputDebugStringW(FormatStr(L"----\n%s\n", title )); 
+					OutputDebugStringW(o.Dump()); 
+				}
+#				endif
+		}
+
+	public:
+		inline void SaveMeta_M(int slotId, int key_mode, AsnObject& MetaO)
+		{
+			try
+			{
+				Lock lock; 
+				//
+				Blob MetaData = MetaO.ToBlob(); 
+				//
+				if (key_mode == 1)
+				{
+					CStringA metaPathA = ETokenPath(slotId, MetaPath()); 
+					//
+					 CStringA rootPathA = ETokenPath(slotId, RootPath()); 
+					 int r0 = CADB_mkdir(rootPathA.GetBuffer()); 
+					 if (r0 != 1)
+					 {
+						int e1 = ERR_get_last_error();
+						string errMsg = FormatStr(L"������ CCOM: %d (CADB_mkdir)", (int)e1 );
+						throw MethodError(errMsg); 
+					 }
+					
+					//int r01 = 
+						CADB_is_dir("etoken:/f45d/"); 
+					
+					int n = MetaData.Length(); 
+					int r1 = CADB_write_file(metaPathA.GetBuffer(), 
+						(char*)MetaData.GetBuffer(), n); 
+					if (r1 <= 0)
+					{
+						int e1 = ERR_get_last_error();
+						string errMsg = FormatStr(L"������ CCOM: %d (CADB_write_file)", (int)e1 );
+						throw MethodError(errMsg); 
+					}
+				}
+				else
+				{
+					// throw MethodError(L"MODE 2"); 
+					//
+					SaveObject(slotId, L" Cabinet", MetaData, CKO_DATA, 1); 
+				}
+			}
+			_Catch()
+		}
+
+		AsnObject MetaObject_1(int slotId, bool mount=true) 
+		{
+			try
+			{
+				CStringA metaPathA = ETokenPath(slotId, MetaPath()); 
+				//
+				if (CADB_file_exists(metaPathA.GetBuffer()))
+				{
+					int size = CADB_file_size(metaPathA.GetBuffer()); 
+					Blob b;
+					b.Allocate(size);
+					CADB_read_file(metaPathA.GetBuffer(), (char*)b.GetBuffer(), size); 
+					AsnObject MetaO(b);
+					//
+					OutputObject(L"Meta", MetaO); 
+					//
+					return MetaO;
+				}
+				else
+				{
+					if (!mount)
+					{
+						return AsnObject(false, AsnObject::UNIVERSAL, AsnObject::_NULL_); 
+					}
+					//
+					AsnObject MetaO = CreateNewMeta(); 
+					//
+					OutputObject(L"Meta", MetaO); 
+					//
+					// ���������� 
+					//
+					SaveMeta_M(slotId, 1, MetaO);
+					//
+					return MetaO; 
+				}
+			}
+			_Catch() 
+		}
+
+		AsnObject MetaObject_2(int slotId, bool mount=true) 
+		{
+			try
+			{
+				throw MethodError(L"MODE 2"); 
+				//Blob MetaData = ReadObject(slotId, L" Cabinet", CKO_DATA); 
+				////
+				//if (MetaData.Length() > 0) 
+				//{
+				//	AsnObject MetaO(MetaData);
+				//	//
+				//	OutputObject(L"Meta", MetaO); 
+				//	//
+				//	return MetaO;
+				//}
+				//else
+				//{
+				//	if (!mount)
+				//	{
+				//		return AsnObject(false, AsnObject::UNIVERSAL, AsnObject::_NULL_); 
+				//	}
+				//	//
+				//	AsnObject MetaO = CreateNewMeta(); 
+				//	//
+				//	OutputObject(L"Meta", MetaO); 
+				//	//
+				//	// ���������� 
+				//	//
+				//	SaveMeta_M(slotId, 2, MetaO);
+				//	//
+				//	return MetaO; 
+				//}
+			}
+			_Catch() 
+		}
+
+		AsnObject MetaObject_M(int slotId, int key_mode, bool mount=true) 
+		{
+			return (key_mode == 1) ? 
+				MetaObject_1(slotId, mount) : MetaObject_2(slotId, mount)
+				;
+		}
+
+#		define _KEY_FLAG_OK 1
+#		define _KEY_FLAG_TODELETE 2
+#		define _KEY_FLAG_REMOVED 8
+
+		inline AsnObject CreateNewKeyObject(const string& keyContainerPwd=L"")
+		{
+			try
+			{
+				AsnObject k = AsnObject::NewSequence(); // container for new key 
+				//
+				int flags = _KEY_FLAG_TODELETE; 
+				k.Add(AsnObject::NewInteger(flags)); 
+				k.Add(AsnObject(keyContainerPwd)); 
+				//
+				return k; 
+			}
+			_Catch()
+		}
+
+		inline int GetETokenFlags(int slotId, int key_i, int key_mode) 
+		{
+			try
+			{
+				AsnObject MetaO = MetaObject_M(slotId, key_mode); 
+				//
+				AsnObject& k = FindKeyObject(MetaO, key_i); 
+				return ((AsnObject&)k[0]).m_Integer; 
+			}
+			_Catch() 
+		}
+
+		inline string GetETokenPassword(int slotId, int key_i, int key_mode) 
+		{
+			try
+			{
+				AsnObject MetaO = MetaObject_M(slotId, key_mode); 
+				//
+				AsnObject& k = FindKeyObject(MetaO, key_i); 
+				return ((AsnObject&)k[1]).m_text; 
+			}
+			_Catch() 
+		}
+
+		inline void SetETokenFlags(int slotId, int key_i, int key_mode, int flags) 
+		{
+			try
+			{
+				AsnObject MetaO = MetaObject_M(slotId, key_mode); 
+				//
+				AsnObject& k = FindKeyObject(MetaO, key_i); 
+				((AsnObject&)k[0]).m_Integer = flags; 
+				//
+				// saving...
+				// 
+				SaveMeta_M(slotId, key_mode, MetaO); 
+			}
+			_Catch() 
+		}
+
+		inline void ETokenFlagOff(int slotId, int key_i, int key_mode, int f) 
+		{
+			try
+			{
+				AsnObject MetaO = MetaObject_M(slotId, key_mode); 
+				//
+				AsnObject& k = FindKeyObject(MetaO, key_i);  
+				int flags = ((AsnObject&)k[0]).m_Integer; 
+				flags = flags & (! f); 
+				((AsnObject&)k[0]).m_Integer = flags; 
+				//
+				// saving...
+				// 
+				SaveMeta_M(slotId, key_mode, MetaO); 
+			}
+			_Catch() 
+		}
+
+		inline SharedArray<string> LabelTuple(const string& CNLabel, const string& OLabel) 
+		{
+			try
+			{
+				SharedArray<string> a;
+				a.Add(CNLabel); 
+				a.Add(OLabel); 
+				return a; 
+			}
+			_Catch()
+		}
+
+		inline SharedArray<string> ETokenLabels(int slotId) 
+		{
+			try
+			{
+				SharedArray<string> t = ETokenLabels_M_All(slotId); // _PROTOCOL_ETOKEN_KEY_MODE
+				//
+				bool ready = false;
+				if (t.Length() >= 2)
+				{
+					if ((_W(t[0]).GetLength() > 0) || (_W(t[1]).GetLength() > 0)) ready = true;
+				}
+				if (ready) return t;
+				//
+				try
+				{
+					t = ETokenLabels_M(slotId, 1); 
+					return t;
+				}
+				catch(...)
+				{
+					return LabelTuple(L"", L""); 
+				}
+			}
+			_Catch()
+		}
+
+		inline SharedArray<string> ETokenLabels_M_All(int slotId) 
+		{
+			try
+			{
+				SharedArray<string> a1 = ETokenLabels_M(int slotId, 1); 
+				SharedArray<string> a2 = ETokenLabels_M(int slotId, 2); 
+				//
+				SharedArray<string> a = ArrayMerge(a2,a1); 
+			}
+			_Catch()
+		}
+
+		inline SharedArray<string> ETokenLabels_M(int slotId, int key_mode) 
+		{
+			try
+			{
+				AsnObject MetaO = MetaObject_M(slotId, key_mode); 
+				//
+				SharedArray<int> nums = GetETokenKeyNums(slotId, key_mode); 
+				for (int j = 0; j < nums.Length(); ++j)
+				{
+					int key_i = nums[j]; 
+					//
+					AsnObject& k = FindKeyObject(MetaO, key_i);  
+					int flags = ((AsnObject&)k[0]).m_Integer; 
+					//
+					if (flags & _KEY_FLAG_OK) 
+					{
+						string reqPath = EToken_GetRequestPath(slotId, key_i); 
+						CStringA reqPathA = ETokenPath(slotId, reqPath); 
+						//
+						Blob reqData; 
+						int buflen = 16 * 1024; 
+						reqData.Expand(buflen); 
+						int r1 = CADB_read_file(reqPathA.GetBuffer(), (char*)reqData.GetBuffer(), buflen); 
+						if (r1 > 0) // exists 
+						{
+							reqData.SetSize(r1); 
+							//
+							AsnObject requestO(reqData); 
+							//
+							NameDescription subject = requestO.Subject;
+							SharedPtr<AsnObject> spAttr = subject.GetAttribute(OID(X500().sCommonNameOid)); 
+							string CN = spAttr->m_text; 
+							//
+							string O; 
+							spAttr = subject.GetAttribute(OID(X500().sOrganizationNameOid)); 
+							if (! spAttr.IsEmpty())
+							{
+								O = spAttr->m_text; 
+							}
+							//
+							if (CN.GetLength() > 0 || O.GetLength() > 0)
+							{
+								return LabelTuple(CN, O); 
+							}
+						}
+					}
+				}
+				//
+				return LabelTuple(L"", L""); 
+			}
+			_Catch() 
+		}
+
+		inline string GetShortLabel(const string& label_, int flags, bool condition=false) 
+		{
+			try
+			{
+				string label = label_; 
+				label.Trim(); 
+				//
+				if (flags & 0x2)
+				{
+					if (condition) label = L""; 
+				}
+				//
+				if (flags & 0x1)
+				{
+					int p = label.Find(L' '); 
+					if (p != -1)
+					{
+						label = label.Left(p); 
+					}
+				}
+				//
+				return label; 
+			}
+			_Catch() 
+		}
+
+#		ifndef ETokenLabelDelim
+#		define ETokenLabelDelim (L",")
+#		endif
+
+		inline string GetActualLabel(int slotId) 
+		{
+			try
+			{
+				SharedArray<string> labels = ETokenLabels(slotId); 
+				string CNLabel = labels[0];
+				string OLabel = labels[1];
+				//
+				bool x = (CNLabel.GetLength() > 0) || (OLabel.GetLength() > 0); 
+				//
+				string label = L"";
+				if (! x) return label; 
+				//
+				label += ETokenLabelDelim + GetShortLabel(OLabel, 0); 
+				//
+				if (CNLabel.GetLength() > 0 && OLabel.GetLength() == 0)
+				{
+					label += ETokenLabelDelim + GetShortLabel(CNLabel, 1); 
+				}
+				//
+				label = Translit(label); 
+				//
+				CK_TOKEN_INFO _i;
+				if (label.GetLength() > sizeof(_i.label)-1) 
+				{
+					label = label.Left(sizeof(_i.label)-1); 
+				}
+				//
+				return label; 
+			}
+			_Catch()
+		}
+
+		inline void SignAsEToken(int slotId) 
+		{
+			try
+			{
+				PKCS11_eToken& eToken = eTokens[slotId]; 
+				if (! eToken.IsPresent()) throw MethodError(L"eToken �� ���������"); 
+				//
+				XmlDocument doc = GetETokenInfo(L"", 1, slotId); 
+				XmlElement eToken_E = doc.SelectSingleNode(
+					FormatStr(L"*/EToken[@SlotId='%d']", (int)slotId )); 
+				//
+				string curLabel = eToken_E.GetAttribute(L"Label"); 
+				curLabel.Trim(); 
+				//
+				if (curLabel == L"eToken" || curLabel.Left(4) == L"")
+				{
+					//TRACE_LOG(_W("Signing eToken...")); 
+					//
+					if (!eToken.hSession)
+					{
+						LoginEToken(slotId);
+					}
+					//TRACE_LINE1(_W("!!! hSession: 0x%x"), (int)eToken.hSession ); 
+					//
+					CStringA nameA = _A(GetActualLabel(slotId));  
+					//TRACE_LOG(_W(nameA)); 
+					char name[256]; 
+					ZeroMemory(name, sizeof(name)); 
+					CopyMemory(name, nameA.GetString(), nameA.GetLength()); 
+					CK_RV rv1 = f_SAPI_SetTokenName(eToken.hSession, (CK_CHAR*)name); 
+					if (rv1)
+					{
+						string errMsg = FormatStr(L"SAPI_SetTokenName: %d", (int)rv1 );
+						throw MethodError(errMsg); 
+					}
+				}
+			}
+			_Catch() 
+		}
+
+		inline int EToken_NewKeyId(int slotId, int key_mode, const string& keyContainerPwd=L"") 
+		{
+			try
+			{
+				AsnObject MetaO = MetaObject_M(slotId, key_mode); 
+				//int len_1 = MetaO.ToBlob().Length();
+				//
+				AsnObject& KeyListInfoO = MetaO.Children[OID(OID_KEY_LIST_INFO)]; 
+				AsnObject& KeyListO = KeyListInfoO.Children[OID(OID_KEY_LIST)];
+				//
+				AsnObject& KeysO = ((AsnObject&) KeyListO[1])[0];
+				//OutputObject(L"KeyListO", KeyListO);
+				//OutputObject(L"KeysO", KeysO);
+				//
+				int keyNum = ((AsnObject&) KeysO[0]).m_Integer; 
+				AsnObject& keySeq = KeysO[1]; 
+				//
+				// new key 
+				//
+				AsnObject k = CreateNewKeyObject(keyContainerPwd); // container for new key 
+				//
+				keySeq.Add(k); 
+				((AsnObject&) KeysO[0]).m_Integer = keyNum + 1; 
+				//
+				// saving...
+				// 
+				//int len_2 = MetaO.ToBlob().Length();
+				//
+				SaveMeta_M(slotId, key_mode, MetaO); 
+				//CStringA metaPathA = ETokenPath(slotId, MetaPath()); 
+				//int size1 = CADB_file_size(metaPathA.GetBuffer()); 
+				//
+				return keyNum; 
+			}
+			_Catch()
+		}
+
+		inline AsnObject& FindKeyObject(AsnObject& MetaO, int i) 
+		{
+			try
+			{
+				AsnObject& KeyListInfoO = MetaO.Children[OID(OID_KEY_LIST_INFO)];
+				AsnObject& KeyListO = KeyListInfoO.Children[OID(OID_KEY_LIST)];
+				//
+				AsnObject& KeysO = ((AsnObject&) KeyListO[1])[0];
+				//OutputObject(L"KeyListO", KeyListO);
+				//OutputObject(L"KeysO", KeysO);
+				//
+				//int keyNum = ((AsnObject&) KeysO[0]).m_Integer; 
+				AsnObject& keySeq = KeysO[1]; 
+				//
+				return keySeq[i]; 
+			}
+			_Catch() 
+		}
+
+		string EToken_GetKeyContainerPath_1(int slotId, int key_i) 
+		{
+			try
+			{
+				return FormatStr(_W(_ETOKEN_ROOT) + L"/" + _ETOKEN_KEYDIR_PREFIX + L"%03d", key_i); 
+			}
+			_Catch()
+		}
+
+		string EToken_GetKeyPath(int slotId, int key_i) 
+		{
+			try
+			{
+				return FormatStr(_W(_ETOKEN_ROOT) + L"/" + _ETOKEN_KEYDIR_PREFIX + L"%03d", key_i)
+					+ L"/fa01"; 
+			}
+			_Catch()
+		}
+
+		string EToken_GetCertPath(int slotId, int key_i) 
+		{
+			try
+			{
+				return FormatStr(_W(_ETOKEN_ROOT) + L"/" + _ETOKEN_KEYDIR_PREFIX + L"%03d", key_i)
+					+ L"/fc01"; 
+			}
+			_Catch()
+		}
+
+		string EToken_GetRequestPath(int slotId, int key_i) 
+		{
+			try
+			{
+				return FormatStr(_W(_ETOKEN_ROOT) + L"/" + _ETOKEN_KEYDIR_PREFIX + L"%03d", key_i)
+					+ L"/fe01"; 
+			}
+			_Catch()
+		}
+
+		string EToken_GetRequestPath_X(int slotId, int key_i) 
+		{
+			try
+			{
+				return FormatStr(_W(_ETOKEN_ROOT) + L"/" + _ETOKEN_KEYDIR_PREFIX + L"%03d", key_i)
+					+ L"/fe02"; 
+			}
+			_Catch()
+		}
+
+		void DeleteFile(int slotId, const string& path) 
+		{
+			try
+			{
+				CStringA pathA = ETokenPath(slotId, path); 
+				CADB_erase_file(pathA.GetBuffer()); 
+			}
+			_Catch()
+		}
+
+		string EToken_NewPath_A(int slotId, int key_mode, int* out_id=0, const string& keyContainerPwd=L"") 
+		{
+			try
+			{
+				if (key_mode == 1)
+				{
+					return _W(ETokenPath(slotId, EToken_NewPath_1(slotId, out_id, keyContainerPwd)));
+				}
+				else if (key_mode == 2)
+				{
+					return EToken_NewPath_2(slotId, out_id, keyContainerPwd); 
+				}
+				else
+				{
+				string errMsg = FormatStr(L"��������� �������� KeyMode=%d", (int)key_mode ); 
+				throw MethodError(errMsg); 
+				}
+			}
+			_Catch() 
+		}
+
+		string EToken_NewPath_2(int slotId, int* out_id=0, const string& keyContainerPwd=L"") 
+		{
+			try
+			{
+				throw MethodError(L"!!! EToken_NewPath_2"); 
+			}
+			_Catch()
+		}
+
+		string EToken_NewPath_1(int slotId, int* out_id=0, const string& keyContainerPwd=L"") 
+		{
+			try
+			{
+				int id = EToken_NewKeyId(slotId, 1, keyContainerPwd); 
+				//
+				string path = EToken_GetKeyContainerPath_1(slotId, id); 
+				//
+				if (out_id) *out_id = id;
+				return path; 
+			}
+			_Catch()
+		}
+
+		SharedArray<int> GetETokenKeyNums(int slotId, int key_mode) 
+		{
+			try
+			{
+				SharedArray<int> keyNums;
+				//
+				AsnObject MetaO = 
+					(key_mode == 1) ? MetaObject_1(slotId, false) : MetaObject_2(slotId, false); 
+				if (MetaO.Tag() == AsnObject::_NULL_)
+				{
+					return keyNums; 
+				}
+				//
+				AsnObject& KeyListInfoO = MetaO.Children[OID(OID_KEY_LIST_INFO)];
+				AsnObject& KeyListO = KeyListInfoO.Children[OID(OID_KEY_LIST)];
+				//
+				AsnObject& KeysO = ((AsnObject&) KeyListO[1])[0];
+				//
+				int keyNum = ((AsnObject&) KeysO[0]).m_Integer; 
+				AsnObject& keySeq = KeysO[1]; 
+				for (int i = 0; i < keyNum; i++)
+				{
+					AsnObject& k = keySeq[i]; 
+					if (k.IsConstructed())
+					{
+						if (k.ChildCount() > 0)
+						{
+							int flags = ((AsnObject&)k[0]).m_Integer;
+							if (flags & _KEY_FLAG_OK)
+							{
+								keyNums.Add(i); 
+							}
+						}
+					}
+				}
+				//
+				return keyNums; 
+			}
+			_Catch()
+		}
+
+
+
+
+
+
+		// ������������� ��������� eToken 
+
+		inline void CheckInit() 
+		{
+			if (wasInit) return; 
+			else
+			{
+				Init(); 
+				//
+				if (! wasInit)
+				{
+					throw MethodInfoExc(L"������� eToken �� ����������"); 
+				}
+			}
+		}
+
+		inline void Init() 
+		{
+			try
+			{
+				Lock lock; 
+				//
+				HINSTANCE hLib = LoadLibrary(m_DllPath); 
+				//
+#				ifdef _DEBUG
+				if (hLib == NULL)
+#				else
+				if (hLib == NULL)
+#				endif
+				{
+					//throw MethodInfoExc(L"������ eToken: ���������� " + _W(m_DllPath) + L" �����������"); 
+					throw MethodInfoExc(L"������� eToken �� ����������"); 
+				}
+				//
+				(FARPROC&)pGFL = GetProcAddress(hLib, "C_GetFunctionList"); 
+				if (pGFL == NULL) 
+				{
+					throw MethodInfoExc(L"������ eToken: (2)"); 
+				}
+				//
+				// Get the function list 
+				//
+				if (CKR_OK != pGFL(&pFunctionList))
+				{
+					throw MethodInfoExc(L"������ eToken: (3)"); 
+				}
+				//
+				// Initialize the PKCS #11 library 
+				//
+				if (CKR_OK != pFunctionList->C_Initialize (0))
+				{
+					throw MethodInfoExc(L"������ eToken: function: C_Initialize"); 
+				}                 
+				//
+				CK_INFO info;
+				if (CKR_OK != pFunctionList->C_GetInfo (&info))
+				{
+					throw MethodInfoExc(L"������ eToken: function: C_GetInfo");  
+				}
+				//
+				//
+				// ----
+				// ETSAPI / SAPI 
+				//
+				LoadETSAPI(); 
+				//
+				wasInit = true; 
+				//
+				//TRACE_LINE(_T("----\neTokens ready")); // ������! 
+			}
+			catch(::::Exception e) 
+			{
+				if (e.m_SeverityLevel == ::::Exception::SeverityError)
+				{
+					throw;
+				}
+				//
+				TRACE_LOG(e.ToString()); 
+			}
+			catch(...)
+			{
+				throw MethodError(L"����������� ������"); 
+			}
+		}
+
+		PKCS11_Manager() 
+		{
+			try
+			{
+				Clear(); 
+				//
+				Init(); 
+			}
+			_Catch() 
+		}
+
+	public:
+		// ----
+		// ������ ������� ���������� � eToken (public) 
+
+#		ifndef _ONLY_SUPPORTED_TOKENS 
+#		define _ONLY_SUPPORTED_TOKENS 1 
+#		endif 
+
+		inline XmlDocument GetETokenInfo(const string& vXslUrl, int flags=1, 
+			int targetSlotId=-1
+			) 
+		{
+			CheckInit(); 
+			//
+			Lock lock;
+			//
+			try
+			{
+#				ifdef _DEBUG
+				TRACE_LINE(_T("! GetETokenInfo: In")); 
+#				endif
+				//
+				string xmlStr = _W(COMMON_XML_START) + 
+					(vXslUrl.GetLength() > 0 ? L"\n<?xml-stylesheet type=\"text/xsl\" href=\"" +
+						vXslUrl + L"\"?>" : L""
+					) + _W(L"\n<ETokenDeviceInfo />") 
+					; 
+				XmlDocument doc;
+				doc.LoadXml(xmlStr); 
+				XmlElement root_E = doc.DocumentElement(); 
+				//
+				// ----
+				// ����� 
+				//
+				// PKCS11_Manager& M = PKCS11_Manager::Acquire(); 
+				//
+				for (int slotId = 0; slotId <= _MAX_TOKEN_SLOT; ++slotId) 
+				{
+#					ifdef _DEBUG
+					TRACE_LINE1(_T("! GetETokenInfo: slotId: %d"), (int)slotId ); 
+#					endif
+					//
+					bool useSlot = (targetSlotId == -1) || ((targetSlotId != -1) && (slotId == targetSlotId)); 
+					//
+					if (useSlot)
+					{
+						CK_SLOT_INFO slot_info;
+						if (CKR_OK == pFunctionList->C_GetSlotInfo (slotId, &slot_info))
+						{
+							XmlElement eToken_E = doc.CreateElement(L"",L"EToken",L""); 
+							//
+							if (slot_info.flags & CKF_TOKEN_PRESENT) 
+							{
+								string rDevAttr = slot_info.flags & CKF_REMOVABLE_DEVICE ? L"1" : L"0"; 
+								//
+								eToken_E.SetAttribute(L"SlotId",FormatStr(L"%d",slotId)); 
+								eToken_E.SetAttribute(L"RemovableDevice",rDevAttr); 
+								//
+								// eToken info 
+								//
+								CK_TOKEN_INFO token_info;
+								if (CKR_OK != pFunctionList->C_GetTokenInfo(slotId, &token_info)) 
+								{
+									throw MethodError(FormatStr(L"���������� eToken �������: %d", (int)slotId ));
+								}
+								else
+								{
+									if (slotId == 0)
+									{
+										/// SAPI_SetTokenName(L"eQQQ"); 
+									}
+									//
+									string label = _W(CStringA((char*)token_info.label,
+										(int)sizeof(token_info.label))); 
+									label.Trim();
+									//
+									string labelExtra;
+									{
+										int p = label.Find(ETokenLabelDelim); 
+										if (p != -1) 
+										{
+											labelExtra = label.Right(label.GetLength()-p-_W(ETokenLabelDelim).GetLength()); 
+											labelExtra.Trim(); 
+											//
+											label = label.Left(p); 
+											label.Trim(); 
+										}
+									}
+									//
+									string manufacturerID = _W(CStringA((char*)token_info.manufacturerID,
+										(int)sizeof(token_info.manufacturerID))); 
+									manufacturerID.Trim();
+									//
+									string model = _W(CStringA((char*)token_info.model,
+										(int)sizeof(token_info.model))); 
+									model.Trim(); 
+									//
+									string serialNumber = _W(CStringA((char*)token_info.serialNumber,
+										(int)sizeof(token_info.serialNumber))); 
+									serialNumber.Trim(); 
+									//
+									string hardwareVersion = FormatStr(L"%d.%d",
+										(int)token_info.hardwareVersion.major,
+										(int)token_info.hardwareVersion.minor);
+									//
+									string firmwareVersion = FormatStr(L"%d.%d",
+										(int)token_info.firmwareVersion.major,
+										(int)token_info.firmwareVersion.minor);
+									//
+									//CK_ATTRIBUTE a; 
+									//a.type = ; 
+									//SAPI_OTP_GetAttributeValue(hSession,&a,1); 
+									//
+									string pinInitedAttr = token_info.flags & CKF_USER_PIN_INITIALIZED ? L"1" : L"0"; 
+									string loginRequiredAttr = token_info.flags & CKF_LOGIN_REQUIRED ? L"1" : L"0"; 
+									//string pinEnteredAttr = (!(token_info.flags & CKF_LOGIN_REQUIRED)) ? L"1" : L"0"; 
+									//
+									eToken_E.SetAttribute(L"Label",label); 
+									if (labelExtra.GetLength() > 0) 
+										eToken_E.SetAttribute(L"OrgLabel",labelExtra); 
+									eToken_E.SetAttribute(L"ManufacturerID",manufacturerID); 
+									eToken_E.SetAttribute(L"Model",model); 
+									eToken_E.SetAttribute(L"SerialNumber",serialNumber); 
+									eToken_E.SetAttribute(L"HardwareVersion",hardwareVersion); 
+									eToken_E.SetAttribute(L"FirmwareVersion",firmwareVersion); 
+									eToken_E.SetAttribute(L"PinInitialized",pinInitedAttr); 
+									eToken_E.SetAttribute(L"LoginRequired",loginRequiredAttr); 
+									//
+									eToken_E.SetAttribute(L"PinEntered",_W(L"0")); 
+									//
+									ReadTokenInfo_SAPI(eToken_E,slotId); 
+									//
+									PKCS11_eToken& t = eTokens[slotId]; 
+									//
+									if (t.hSession) // TODO: ��� ��? 
+									{
+										eToken_E.SetAttribute(L"PinEntered",_W(L"1")); 
+									}
+									//
+									root_E.AppendChild(eToken_E); 
+								}
+							}
+						}
+					}
+				}
+				//
+				// ---- 
+				// Post-������ 
+				//
+#				ifdef _DEBUG
+				TRACE_LINE(_T("! GetETokenInfo: Post-������")); 
+#				endif
+				//
+				int i = -1;
+				int n = 0;
+				int iFirstSlot = -1;
+				//
+				XmlNodeList L = doc.SelectNodes(L"/*/EToken");
+				for (int k = 0; k < L.Count(); ++k) 
+				{
+					XmlElement n1 = L[k]; 
+					//
+					string slotIdStr = n1.GetAttribute(L"SlotId");
+					string name = n1.GetAttribute(L"Label");
+					name.MakeUpper(); 
+					//
+					if (name == L"") 
+					{
+						if (n == 0)
+						{
+							i = _wtoi(slotIdStr);
+						}
+						++n;
+						//
+						if (n == 1) iFirstSlot = _wtoi(slotIdStr);
+					}
+					else 
+					{
+						if (iFirstSlot == -1) iFirstSlot = _wtoi(slotIdStr);
+					}
+				}
+				//
+				root_E.SetAttribute(L"Num", FormatStr(L"%d", (int)n ));
+				//
+				if (n == 1)
+				{
+					root_E.SetAttribute(L"Unique", _W(L"true"));
+					root_E.SetAttribute(L"SelectedSlotId", FormatStr(L"%d", (int)i ));
+				}
+				else if (L.Count() == 1)
+				{
+					root_E.SetAttribute(L"Unique", _W(L"true"));
+					root_E.SetAttribute(L"SelectedSlotId", FormatStr(L"%d", (int)iFirstSlot ));
+				}
+				//
+#				ifdef _DEBUG
+				{
+					OutputDebugString(_S(root_E.OuterXml())); 
+				}
+#				endif
+				//
+#				ifdef _DEBUG
+				TRACE_LINE(_T("! GetETokenInfo: Out")); 
+#				endif
+				//
+				return doc; 
+			}
+			_Catch() 
+		}
+
+		inline void Touch_eToken(int targetSlotId) 
+		{
+			try
+			{
+				XmlDocument doc = GetETokenInfo(L"", 1, targetSlotId) ; 
+				XmlNodeList L = doc.SelectNodes(L"*/EToken"); 
+			}
+			_Catch() 
+		}
+	};
+
+
+
+	// ===========================================================================================
+	// �������� �������� - Smart Cards 
+
+	// -------------------------------------------------------------------------------------------
+	// Smart Card 
+
+	struct SmartCard
+	{
+		int Port; 
+
+		string Name; 
+
+		string Type; 
+
+		// ������������ ��������� 
+
+		SCARDHANDLE hCardHandle; 
+
+		// ----
+		// ������ 
+
+		inline void Clear()
+		{
+			Port = 0; 
+			//
+			hCardHandle = 0;
+		}
+
+		SmartCard() 
+		{
+			Clear(); 
+		}
+
+		inline bool DeviceIsEToken() 
+		{
+			return (Name.Left(6) == L"eToken"); 
+		}
+
+		inline void Lookup() 
+		{
+			try
+			{
+				// �������, ��� ���������� 
+				//
+				// ....
+			}
+			_Catch() 
+		}
+
+		inline void Connect() 
+		{
+		}
+
+		inline void Init() 
+		{
+			try
+			{
+				// ----
+				// Parse(Name) 
+				//
+				if (DeviceIsEToken()) 
+				{
+					Type = L"eToken"; 
+				}
+				else
+				{
+					// Unknown device 
+				}
+				// 
+				// ----
+				// ����������� ����� ���������� ���������� (��� �����������) 
+				//
+				Lookup(); 
+				//
+					/// Connect(); 
+			}
+			_Catch() 
+		}
+	};
+
+
+
+	// -------------------------------------------------------------------------------------------
+	// Smart Cards: Database 
+
+	struct ScDatabase 
+	{
+		inline static ScDatabase& Acquire() 
+		{
+			static ScDatabase s_ScDatabase; 
+			return s_ScDatabase; 
+		}
+
+		DWORD Scope; 
+
+		SCARDCONTEXT m_ScCtx; 
+
+		inline void Clear() 
+		{
+			m_ScCtx = 0; 
+		}
+
+		inline void SetToUser() 
+		{
+			Scope = SCARD_SCOPE_USER; 
+		}
+
+		//inline void LocateCards() 
+		//{
+		//	try
+		//	{
+		//		if (! m_ScCtx) throw MethodError(E_POINTER); 
+		//		//
+		//		LONG r = SCardLocateCards(
+		//			m_ScCtx,
+		//			__in     LPCTSTR mszCards,
+		//			__inout  LPSCARD_READERSTATE rgReaderStates,
+		//			__in     DWORD cReaders
+		//			);
+		//	}
+		//	_Catch() 
+		//}
+
+		// 040 Cym. Pine Clash �Moon Venus�   6,00   BS 
+
+		inline void EstablishContext() 
+		{
+			try
+			{
+				if (m_ScCtx) return; // ������! 
+				//
+				LONG r = SCardEstablishContext(
+					Scope,
+					NULL,
+					NULL,
+					&m_ScCtx
+					);
+				if (r != SCARD_S_SUCCESS) 
+				{
+					string msg = FormatStr(L"������ Smart Card: 0x%x", (int)r ); 
+					throw MethodError(msg); 
+				}
+			}
+			_Catch() 
+		}
+
+		inline SharedArray<string> ListReaders() 
+		{
+			try
+			{
+				EstablishContext(); 
+				//
+				if (! m_ScCtx) throw MethodError(E_POINTER); 
+				//
+				SharedArray<string> sReaders; // result 
+				//
+				LPTSTR pmszReaders = NULL; 
+				LPTSTR pReader; 
+				LONG lReturn; 
+				DWORD cch = SCARD_AUTOALLOCATE;
+				//
+				// Retrieve the list of readers 
+				//
+				lReturn = SCardListReaders(
+							 m_ScCtx, 
+							 NULL,
+							 (LPTSTR)&pmszReaders, 
+							 &cch 
+							 );
+				if (SCARD_S_SUCCESS != lReturn)
+				{
+					throw MethodError(L"������ ��� ������������ Smart Card Readers"); 
+				}
+				//
+				pReader = pmszReaders;
+				//
+				while ( _T('\0') != *pReader )
+				{
+					string readerName = _W(_S(pReader)); 
+					//
+					sReaders.Add(readerName); 
+					//
+					// Advance to the next value: 
+					pReader = pReader + readerName.GetLength() + 1; 
+				}
+				// 
+				// Free pmszCards (by calling SCardFreeMemory) 
+				// 
+				SCardFreeMemory(m_ScCtx,pmszReaders); 
+				//
+				return sReaders; 
+			}
+			_Catch() 
+		}
+
+		inline void ListCards() 
+		{
+			try
+			{
+				SharedArray<SmartCard> sCards; // result 
+				//
+				LPTSTR pmszCards = NULL; 
+				LPTSTR pCard; 
+				LONG lReturn; 
+				DWORD cch = SCARD_AUTOALLOCATE;
+				//
+				// Retrieve the list of cards.
+				lReturn = SCardListCards(NULL,
+							 NULL,
+							 NULL,
+							 NULL,
+							 (LPTSTR)&pmszCards, 
+							 &cch );
+				if ( SCARD_S_SUCCESS != lReturn )
+				{
+					throw MethodError(L"������ ��� ������������ ��������� Smart Cards"); 
+				}
+				// Do something with the multi string of cards.
+				// Output the values.
+				// A double-null terminates the list of values.
+				pCard = pmszCards;
+				//
+				while ( _T('\0') != *pCard )
+				{
+					SmartCard sc;
+					sc.Name = _S(pCard); 
+					sc.Init(); 
+					//
+					sCards.Add(sc); 
+					//
+					// Advance to the next value: 
+					pCard = pCard + sc.Name.GetLength() + 1; 
+				}
+				// 
+				// Free pmszCards (by calling SCardFreeMemory) 
+				// 
+				SCardFreeMemory(NULL,pmszCards); 
+			}
+			_Catch() 
+		}
+
+		// ������������ 
+
+		ScDatabase() 
+		{
+			try
+			{
+				Clear(); 
+				//
+				SetToUser(); 
+				//
+				EstablishContext(); 
+			}
+			_Catch() 
+		}
+		
+		~ScDatabase() 
+		{
+			if (m_ScCtx) 
+			{
+				SCardReleaseContext(m_ScCtx); 
+			}
+		}
+	};
+
+
+
+
+				
+				
+	// ===========================================================================================
+	// �����, ����������� �������� � eToken 
+
+	class EToken
+	{
+	public:
+		// ---------------------------------------------------------------------------------------
+		// Smart Card infrastructure 
+
+		//inline static SharedArray<SmartCard> GetSmartCards() 
+		//{
+		//	try
+		//	{
+		//		SharedArray<string> readerNames = ScDatabase::Acquire().ListReaders(); 
+		//		//
+		//		for (int k = 0; k < readerNames.Length(); ++k)
+		//		{
+		//			string readerName = readerNames[k];
+		//			TRACE_LINE1(_T("Reader: %s"), _S(readerName).GetString() ); 
+		//		}
+		//	}
+		//	_Catch() 
+		//}
+
+		// ----
+		// �����, ������ 
+
+		inline static SharedArray<SharedPtr<EToken> >& eTokens() 
+		{
+			try
+			{
+				static SharedArray<SharedPtr<EToken> > s_eTokens; 
+				//
+				return s_eTokens; 
+			}
+			_Catch() 
+		}
+
+		inline static SharedArray<SharedPtr<EToken> > All(int* out_pStart=0,int* out_pEdge=0) 
+		{
+			try
+			{
+				if (eTokens().Length() > 0)
+				{
+					return eTokens(); 
+				}
+				//
+				XmlDocument doc = PKCS11_Manager_().GetETokenInfo(L""); 
+				//
+				// ������ ������ eTokens 
+				//
+				//int start = _ETOKEN_PORT_START; 
+				//int edge = _ETOKEN_PORT_EDGE; 
+				////
+				//for (int port_i = start; port_i <= edge; ++port_i) 
+				//{
+				//	eTokens()[port_i] = new EToken(); 
+				//	SharedPtr<EToken>& t = eTokens()[port_i]; 
+				//	t->SetPort(port_i); 
+				//}
+				////
+				//if (out_pStart) *out_pStart = start; 
+				//if (out_pEdge) *out_pEdge = edge; 
+				//
+				return eTokens(); 
+			}
+			_Catch() 
+		}
+
+
+
+
+
+
+	protected:
+		// ---------------------------------------------------------------------------------------
+		// ��������� ������ 
+
+		inline string CComErrorMsg() throw() 
+		{
+			ULONG err = ERR_get_last_error(); 
+			unsigned char* text = ERR_get_errors(); 
+			//
+			string msg1 = FormatStr(L"CCOM error: %d\n", (int)err ); 
+			string msg2 = _W(text); 
+			string msg = msg1 + msg2; 
+			//
+#			ifdef _DEBUG
+			{
+				TRACE_LOG(_S(msg1)); 
+				OutputDebugString(_S(msg2)); 
+			}
+#			endif
+			// 
+			return msg; 
+		}
+
+
+
+	public:
+		// ---------------------------------------------------------------------------------------
+		// StatusObject 
+
+#		define ETokenStatus_Ok							0
+#		define ETokenStatus_E_EmptyRead 				(13000 + 1)
+#		define ETokenStatus_E_WriteError 				(13000 + 2)
+
+		//struct StatusObject 
+		//{
+		//};
+
+#		define ETokenStatusOid (L"1.2.643.6.2.1.5.90") 
+
+		inline static AsnObject NewStatusObject(int status,int extraCode=0) 
+		{
+			try
+			{
+				AsnObject sO = AsnObject::NewSequence(); 
+				//
+				sO.Add(AsnObject(OID(ETokenStatusOid)));
+				sO.Add(AsnObject((int)status)); 
+				//
+				if (extraCode != 0)
+				{
+					sO.Add(AsnObject((int)extraCode)); 
+				}
+				//
+				// ����������� 
+				//
+				AsnObject statusO = AsnObject::NewSequence(); 
+				//
+				statusO.Add(sO); 
+				//
+				return statusO; 
+			}
+			_Catch() 
+		} 
+
+
+
+		inline static int GetStatusObjectCode(AsnObject statusO,bool* out_pIsStatusObject=0) 
+		{
+			try
+			{
+				if (statusO.Tag() != AsnObject::SEQUENCE) 
+				{
+					if (out_pIsStatusObject) *out_pIsStatusObject = false; 
+					return S_FALSE; 
+				}
+				//
+				if (statusO.ChildCount() < 1) 
+				{
+					if (out_pIsStatusObject) *out_pIsStatusObject = false; 
+					return S_FALSE; 
+				}
+				//
+				AsnObject sO = statusO[0]; 
+				//
+				if (sO.Tag() != AsnObject::SEQUENCE) 
+				{
+					if (out_pIsStatusObject) *out_pIsStatusObject = false; 
+					return S_FALSE; 
+				}
+				//
+				if (sO.ChildCount() < 2) 
+				{
+					if (out_pIsStatusObject) *out_pIsStatusObject = false; 
+					return S_FALSE; 
+				}
+				//
+				AsnObject sO_0 = sO[0]; 
+				AsnObject sO_1 = sO[1]; 
+				//
+				if (sO_0.Tag() != AsnObject::OBJECT_IDENTIFIER) 
+				{
+					if (out_pIsStatusObject) *out_pIsStatusObject = false; 
+					return S_FALSE; 
+				}
+				if (! (sO_0.Oid() == OID(ETokenStatusOid))) 
+				{
+					if (out_pIsStatusObject) *out_pIsStatusObject = false; 
+					return S_FALSE; 
+				}
+				//
+				if (sO_1.Tag() != AsnObject::INTEGER) 
+				{
+					if (out_pIsStatusObject) *out_pIsStatusObject = false; 
+					return S_FALSE; 
+				}
+				//
+				if (out_pIsStatusObject) *out_pIsStatusObject = true; 
+				int v = sO_1.m_Integer; 
+				return v; 
+			}
+			_Catch() 
+		}
+
+		inline static bool IsStatusObject(AsnObject statusO) 
+		{
+			bool x; 
+			GetStatusObjectCode(statusO,&x); 
+			return x; 
+		}
+
+
+
+
+
+
+	protected:
+		// ---------------------------------------------------------------------------------------
+		// ������ 
+
+		void* m_PseCtx;
+
+		int m_Port;
+
+		CStringA m_Pin;
+
+
+
+	protected:
+		// ---------------------------------------------------------------------------------------
+		// ����������� 
+
+		inline void SetMyPin() 
+		{
+			try
+			{
+				//// SharedArray<SmartCard> sCards = GetSmartCards(); 
+				//
+				XmlDocument doc = PKCS11_Manager_().GetETokenInfo(false); 
+				//
+				// ----
+				// eTokens 
+				//
+				CADB_init(); 
+				//
+				void* m_PseCtx = PSE_CTX_new(); 
+				//
+				CStringA m_Pin("qqq");
+				//
+				if (PSE_CTX_set_etoken(
+					m_PseCtx, 
+					m_Pin.GetBuffer(), 
+					m_Pin.GetLength(), 
+					0L 
+					) == 0) 
+				{
+					string errorMsg = CComErrorMsg(); 
+					throw MethodError(errorMsg);
+				}
+				//
+				Blob b1 = WideStringToUTF8(L"TESTING"); 
+				//
+				Blob b2;
+				b2.Allocate(1024); 
+				//
+				//int r21 = CADB_erase_file("etoken:/f4sd/ff01"); 
+				//int r3 = CADB_read_file("etoken:/f4sd/ff01",(char*)b2.GetBuffer(),b2.Length()); 
+				//int r1 = CADB_write_file("etoken:/f4sd/ff01",(char*)b1.GetBuffer(),b1.Length()); 
+				//int r2 = CADB_mkdir("etoken:/f45d"); 
+				//
+				//int r21 = CADB_erase_file("etoken:/f4sd/ff01"); 
+				//int r20 = CADB_rmdir("etoken:/f45d",1); 
+			}
+			_Catch() 
+		}
+
+	private:
+		EToken(): m_Port(-1), m_Pin(""), m_PseCtx(0) 
+		{
+		}
+
+	public:
+		inline static SharedPtr<EToken> New() 
+		{
+			return new EToken(); 
+		}
+
+	public:
+		inline const EToken& operator =(const EToken& other) 
+		{
+			m_PseCtx = other.m_PseCtx; 
+			m_Pin = other.m_Pin; 
+			m_Port = other.m_Port; 
+			//
+			return other; 
+		}
+
+		EToken(const EToken& other) 
+		{
+			operator =(other); 
+		}
+
+		inline void SetPort(int port) 
+		{
+			try
+			{
+				if (m_Port != -1) throw MethodError(L"���� ��� ���������� �����"); 
+				//
+				m_Port = port; 
+			}
+			_Catch() 
+		}
+
+		inline void SetPin(const string& pin) 
+		{
+			try
+			{
+				if (m_Pin.GetLength() > 0) throw MethodError(L"PIN-��� ��� ���������� �����"); 
+				//
+				m_Pin = _A(pin); 
+				SetMyPin(); 
+			}
+			_Catch() 
+		}
+
+
+
+
+
+
+		// ---------------------------------------------------------------------------------------
+		// �������� ������� eToken 
+
+		inline int GetPathLen() 
+		{
+			return _ETOKEN_PATH_LEN; 
+		}
+
+
+
+		inline CStringA GetPhysicalPath(const string& path) 
+		{
+			try
+			{
+				CStringA physPath = _A("etoken:") + _A(path); 
+				//
+				return physPath; 
+			}
+			_Catch() 
+		}
+
+
+
+		inline string FormatDir(const string& pattern,int n) 
+		{
+			try
+			{
+				int m = GetPathLen() - 1; 
+				string s = pattern.GetLength() <= m ? pattern : pattern.Left(m); 
+				string fmt; 
+				switch (GetPathLen() - m) 
+				{
+				case 1:
+					fmt = s + L"%01d";
+					break; 
+				case 2:
+					fmt = s + L"%02d";
+					break; 
+				case 3:
+					fmt = s + L"%03d";
+					break; 
+				case 4:
+					fmt = s + L"%04d";
+					break; 
+				default:
+					fmt = s + L"%d"; 
+				}
+				//
+				string path = FormatStr(fmt, (int)n ); 
+				//
+				return path; 
+			}
+			_Catch() 
+		}
+
+
+
+		inline Blob ReadFileContent(const string& path,AsnObject* out_pStatus=0) 
+		{
+			try
+			{
+				CStringA physPath = GetPhysicalPath(path); 
+				//
+				int size = CADB_file_size(physPath.GetBuffer()); 
+				//
+				if (size <= 0)
+				{
+					size = 0; 
+				}
+				//
+				Blob data; 
+				//
+				if (size > 0) 
+				{
+					data.Expand(size);
+					int s0 = size; 
+					//
+					size = CADB_read_file(
+						physPath.GetBuffer(), 
+						(char*)data.GetBuffer(),size 
+						);
+					if (size > s0) size = s0; // sec. check 
+				}
+				//
+				if (size <= 0) // �� ��������� 
+				{
+#					ifdef _ETOKEN_THROW_ON_RW_ERR
+					{
+						throw MethodError(L"������ ������ eToken (1)")
+							.AddIfNewSource_(_W(MetaPath));
+					}
+#					endif
+					//
+					if (out_pStatus) *out_pStatus = NewStatusObject(ETokenStatus_E_EmptyRead); 
+						// �� ������� ��������� ���� �� �����-���� ������� 
+					return Blob(); 
+				}
+				//
+				data.SetSize(size); 
+				//
+				if (out_pStatus) *out_pStatus = NewStatusObject(ETokenStatus_Ok); 
+				return data; 
+			}
+			_Catch() 
+		}
+
+
+
+		inline void WriteFile(const string& path, 
+			Blob data,
+			AsnObject* out_pStatus=0 
+			) 
+		{
+			try
+			{
+				CStringA physPath = GetPhysicalPath(path); 
+				//
+				int size = CADB_write_file( 
+						physPath.GetBuffer(), 
+						(char*)data.GetBuffer(),data.Length()  
+						);
+				//
+				if ((size < 0) || (size < data.Length())) // �� �������� 
+				{
+#					ifdef _ETOKEN_THROW_ON_RW_ERR
+					{
+						throw MethodError(L"������ ������ �� eToken (1)")
+							.AddIfNewSource_(_W(MetaPath));
+					}
+#					endif
+					//
+					if (out_pStatus) *out_pStatus = NewStatusObject(ETokenStatus_E_WriteError); 
+						// �� ������� ��������� ���� �� �����-���� ������� 
+					return; 
+				}
+				//
+				// ������! 
+			}
+			_Catch() 
+		}
+
+
+
+		inline void CreateDirectory(const string& path) 
+		{
+			try
+			{
+				CStringA physPath = GetPhysicalPath(path); 
+				//
+				if (CADB_mkdir(physPath.GetBuffer()) == 0) 
+				{
+					throw MethodError(L"������ �������� ���������� �� eToken (1)")
+						.AddIfNewSource_(_W(physPath));
+				}
+			}
+			_Catch() 
+		}
+
+
+
+		inline bool FileExists(const string& path) 
+		{
+			try
+			{
+				CStringA physPath = EToken::GetPhysicalPath(path); 
+				//
+				bool x = (CADB_file_exists(physPath.GetBuffer()) != 0); 
+				//
+				return x; 
+			}
+			_Catch() 
+		}
+
+
+
+		// ������ ��������� ����� �� eToken 
+
+#		ifndef _ETOKEN_MIN_FILES
+#		define _ETOKEN_MIN_FILES (8)
+#		endif
+
+#		ifndef _ETOKEN_MAX_FILES
+#		define _ETOKEN_MAX_FILES (32)
+#		endif
+
+		// ������������:
+		// 'path' -- ���� �� eToken ���� xxxx/yyyy/zzzz ��� ������������ �������� 
+		// 'dir' �������� �� ������ ��� ����������, �� ����� � ��� ����� (��� '/') 
+
+		// �������� ��� ����� ��� ���������� (������) �� ���� 
+
+		inline string GetDirFromPath(const string& path) 
+		{
+			try
+			{
+				int p1 = path.ReverseFind(L'/'); 
+				int p2 = path.ReverseFind(L'\\'); 
+				//
+				int p = p1 == -1 ? p2 : (p2 == -1 ? p1 : (p1 > p2 ? p1 : p2) ); 
+				//
+				string dir; 
+				//
+				if (p == -1)
+				{
+					dir = path; 
+				}
+				else 
+				{
+					dir = path.Right(path.GetLength() - p - 1); 
+				}
+				return dir; 
+			}
+			_Catch() 
+		}
+
+
+
+		// ��������� �����(!) � ����� basePath ������������ �������� prefix, ������ ���������� minLen, maxLen 
+
+		inline void ReadNumberedFiles( 
+			const string& basePath, 
+			const string& prefix, 
+			int minLen, // 0 (�� ������������) ��� �������� 
+			int maxLenParam, // 0 (default) ��� �������� 
+			SharedArray<string>* out_pDirs,
+			SharedArray<Blob>* out_pFiles=0, 
+			int start=1, 
+			bool controlFirstFile=false 
+			)
+		{
+			try
+			{
+					//bool finished = false; 
+					////
+					//for (int k = 1; (k <= _ETOKEN_MAX_KEYS) && (! finished); ++k) 
+					//{
+					//	bool found = false; 
+					//	bool ff = false; 
+					//	//
+					//	for (int j = 1; 
+					//		(j <= _ETOKEN_MIN_FILES) || ((j <= _ETOKEN_MAX_FILES) && (! ff)); ++j) 
+					//	{
+					//		CStringA path = GetETokenContainerDir(j); 
+					//		bool x = 
+					//	}
+					//}
+
+
+
+				if (! out_pDirs) throw MethodError(E_POINTER); 
+				// 
+				int n = 0; // ������� ����� ������ � ������ 
+				// 
+				int maxLen = maxLenParam > 0 ? maxLenParam : 64; 
+				//
+				bool finished = false; 
+				//
+				for (int j = start; 
+					(j <= maxLen) && (! finished); ++j) 
+				{
+					string dir = FormatDir(prefix,j); 
+					string path = basePath + L"/" + dir; 
+					//
+					AsnObject statusO = AsnObject::NewSequence(); 
+					Blob data = ReadFileContent(path,&statusO); 
+					bool x = data.Length() > 0; 
+					if (x)
+					{
+						(*out_pDirs)[n] = dir; 
+						//
+						if (out_pFiles) (*out_pFiles)[n] = data; 
+						//
+						++n; 
+					}
+					else
+					{
+						if (controlFirstFile && (j == start)) 
+						{
+							finished = true; 
+						}
+						//
+						if (minLen == 0)
+						{
+							finished = true;
+						}
+						else
+						{
+							if (j > minLen) finished = true; 
+						}
+					}
+				}
+			}
+			_Catch() 
+		}
+
+
+
+		// ��������� ����� � ���������� ������������ ������ ��������� prefixTable 
+
+		void ReadNumberedFilesEx(
+			const string& basePath, 
+			const string& prefixTable, 
+			int minLen,
+			int maxLenParam,
+			SharedArray<string>* out_pDirs,
+			SharedArray<Blob>* out_pFiles=0, 
+			int start=1, 
+			bool controlFirstFile=false 
+			)
+		{
+			try
+			{
+				if (! out_pDirs) throw MethodError(E_POINTER); 
+				// 
+				SharedArray<string> prefixArray = prefixTable / L";"; 
+				//
+				for (int k = 0; k < prefixArray.Length(); ++k) 
+				{
+					string prefix = prefixArray[k]; 
+					//
+					SharedArray<string> dirs;
+					SharedArray<Blob> bb;
+					//
+					ReadNumberedFiles(basePath,prefix,minLen,maxLenParam, 
+						&dirs, 
+						out_pFiles ? &bb : 0, 
+						start, controlFirstFile 
+						); 
+					//
+					(*out_pDirs) += dirs; 
+					if (out_pFiles) (*out_pFiles) += bb; 
+				}
+			}
+			_Catch() 
+		}
+
+
+
+		XmlElement ReadDirectoryContent( 
+			XmlDocument doc, // ��������, ������������ �������� ����� ����������� XmlElement 
+			const string& path, 
+			SharedArray<string> filePrefixTables, 
+			SharedArray<string> subdirPrefixTables, 
+			int level=1, 
+			int depth=1, 
+			bool includeData=false, 
+			int minLen=_ETOKEN_MIN_FILES, 
+			int maxLen=_ETOKEN_MAX_FILES, 
+			int start=1 
+			) 
+		{
+			try
+			{
+				XmlElement E = doc.CreateElement(L"",L"dir",L""); 
+				//
+				// ��������� ������� ���������� 
+				//
+				string dir = GetDirFromPath(path); 
+				E.SetAttribute(L"name",dir); 
+				//
+				// ����� � ���������� 
+				{
+					SharedArray<string> dirs;
+					SharedArray<Blob> bb; 
+					//
+					ReadNumberedFilesEx(path,filePrefixTables[level-1],minLen,maxLen, 
+						&dirs,
+						includeData ? &bb : 0, 
+						start, level > 1 ? true : false 
+						);
+					//
+					for (int j = 0; j < dirs.Length(); ++j) 
+					{
+						string fileName = dirs[j]; 
+						//
+						XmlElement file_E = doc.CreateElement(L"",L"file",L""); 
+						file_E.SetAttribute(L"name",fileName); 
+						//
+						if (includeData) 
+						{
+							XmlText file_text = doc.CreateTextNode(__ToBase64(bb[j])); 
+							file_E.AppendChild(file_text); 
+						}
+					}
+				}
+				//
+				// ������������� 
+				//
+				if (level < depth) 
+				{
+					SharedArray<string> subdirPrefixes = _W(subdirPrefixTables[level-1]) / L";"; 
+					//
+					for (int u = 0; u < subdirPrefixes.Length(); ++u) 
+					{ 
+						string subdirPrefix = subdirPrefixes[u]; 
+						//
+						for (int dir_i = start; dir_i <= maxLen; ++dir_i) 
+						{
+							string base = path + L"/" + FormatDir(subdirPrefix,dir_i); 
+							//
+							XmlElement dir_E = ReadDirectoryContent( 
+								doc, 
+								base, 
+								filePrefixTables, 
+								subdirPrefixTables, 
+								level+1, 
+								depth, 
+								includeData, 
+								minLen, 
+								maxLen, 
+								start
+								); 
+							E.AppendChild(dir_E); 
+						}
+					}
+				}
+				//
+				return E; 
+			}
+			_Catch() 
+		}
+
+
+
+	}; // class EToken 
+
+
+
+} // namespace Slot
+
