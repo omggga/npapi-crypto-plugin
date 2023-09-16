@@ -1,18 +1,17 @@
 #!/bin/bash -e
 
-if [ "${GEN}" = "" ]; then
-    GEN='Unix Makefiles'
-fi
+GEN="${GEN:-Unix Makefiles}"
 
+# Source the common script and shift arguments
 source "${0%/*}/common.sh" "$@"
 shift $USED_ARGS
 
-pushd "$BUILDDIR"
-cmake -G "$GEN" -DFB_ROOT="${FB_ROOT}" "$@" "${PROJDIR}"
-if [ "$?" -ne 0 ]; then
+# Change to the build directory and run CMake
+pushd "$BUILDDIR" > /dev/null
+if ! cmake -G "$GEN" -DFB_ROOT="${FB_ROOT}" "$@" "${PROJDIR}"; then
     echo "CMake failed. Please check error messages"
     popd > /dev/null
-    exit
-else
-    popd
+    exit 1
 fi
+
+popd > /dev/null

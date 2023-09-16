@@ -1,19 +1,13 @@
-#/bin/bash
+#!/bin/bash
 
-CPPFILES=`find . -type f -name '*.cpp'`
-HFILES=`find . -type f -name '*.h'`
+# Find all .cpp and .h files
+FILES=$(find . -type f \( -name '*.cpp' -o -name '*.h' \))
 
-for FILE in $HFILES
-do
-    if [ -n "$(sed -n "\$p" $FILE)" ]; then
+# Process each file
+for FILE in $FILES; do
+    # Check if the last character of the file is not a newline
+    if [ "$(tail -c 1 "$FILE")" != "" ]; then
         echo "Adding newline to $FILE"
-        echo "" >> $FILE
-    fi
-done
-for FILE in $CPPFILES
-do
-    if [ -n "$(sed -n "\$p" $FILE)" ]; then
-        echo "Adding newline to $FILE"
-        echo "" >> $FILE
+        echo "" >> "$FILE"
     fi
 done
